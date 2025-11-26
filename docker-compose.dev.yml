@@ -1,0 +1,55 @@
+services:
+  user-service:
+    build: ./UsuariosYEmpleados
+    env_file:
+      - ../.env
+    environment:
+      - DB_HOST=db
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - PORT=4002
+      - DATABASE_SERVICE_URL=http://database-service:3002
+    ports:
+      - "4002:$4002"
+    depends_on:
+      - db
+      - database-service
+    networks:
+      - dev-network
+
+  user-mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    volumes:
+      - users_db_data:/var/lib/mysql
+    networks:
+      - dev-network
+
+  user-service-db:
+    build:
+      context: ./Database
+      dockerfile: dockerfile
+    env_file:
+      - ../.env
+    environment:
+      - DB_HOST=user-mysql
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - PORT=3002
+    depends_on:
+      - db
+    networks:
+      - dev-network
+    ports:
+      - "3002:3002"
+
+volumes:
+  users_db_data:
+
+networks:
+  dev-network:
+    driver: bridge

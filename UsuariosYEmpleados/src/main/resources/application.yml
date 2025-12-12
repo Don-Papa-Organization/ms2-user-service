@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: UsuariosYEmpleados
+
+  # ========== DATASOURCE (SQL Server) ==========
+  datasource:
+    url: jdbc:sqlserver://${DB_HOST:user-mysql.database.windows.net}:${DB_PORT:1433};database=user-mysql;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30
+    
+    username: ${DB_USERNAME:donpapamaster}
+    password: ${DB_PASSWORD:MiContraseñaSegura123!}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 10
+      connection-test-query: SELECT 1
+
+  # ========== JPA ==========
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServer2016Dialect
+        jdbc:
+          batch_size: 20
+
+  # ========== SERVER ==========
+  server:
+    port: ${PORT:8080}  # ¡IMPORTANTE! Render/Azure usan PORT
+
+  # ========== ACTUATOR ==========
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: health,info
+    endpoint:
+      health:
+        show-details: always
+        probes:
+          enabled: true
+
+# ========== LOGGING ==========
+logging:
+  level:
+    org.springframework.web: INFO
+    com.zaxxer.hikari: DEBUG

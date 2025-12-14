@@ -31,11 +31,11 @@
 	</properties>
 	<dependencies>
 		<!-- azure -->
-		<dependency>
+		<!-- <dependency>
 			<groupId>com.microsoft.sqlserver</groupId>
 			<artifactId>mssql-jdbc</artifactId>
 			<scope>runtime</scope>
-    	</dependency>
+    	</dependency> -->
 
 		<!-- <dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -100,10 +100,10 @@
 	</dependency>
 
 	<!-- Spring Boot Actuator para health checks (requerido por Azure App Service) -->
-	<dependency>
+	<!-- <dependency>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-actuator</artifactId>
-	</dependency>
+	</dependency> -->
 
 	</dependencies>
 

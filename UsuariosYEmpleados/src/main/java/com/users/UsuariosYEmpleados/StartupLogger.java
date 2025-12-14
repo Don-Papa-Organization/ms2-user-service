@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class StartupLogger implements CommandLineRunner {
 
-    @Value("${PORT:8080}")
+    @Value("${PORT:4002}")
     private String port;
 
     @Override

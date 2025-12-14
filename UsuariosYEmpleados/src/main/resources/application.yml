@@ -2,32 +2,30 @@ spring:
   application:
     name: UsuariosYEmpleados
 
-  # ========== DATASOURCE (SQL Server) ==========
+  # ========== DATASOURCE (MySQL - local o Docker) ==========
   datasource:
-    url: jdbc:sqlserver://${DB_HOST:user-mysql.database.windows.net}:${DB_PORT:1433};database=user-mysql;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30
-    
-    username: ${DB_USERNAME:donpapamaster}
+    url: jdbc:mysql://${DB_HOST:user-mysql}:${DB_PORT:3306}/${DB_NAME:don_papa}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:MiContraseñaSegura123!}
-    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      connection-timeout: 30000
-      maximum-pool-size: 10
-      connection-test-query: SELECT 1
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:5}
+      initialization-fail-timeout: ${DB_INIT_FAIL_TIMEOUT:-1}
+      connection-test-query: ${DB_CONNECTION_TEST_QUERY:SELECT 1}
 
   # ========== JPA ==========
   jpa:
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}
-    show-sql: ${JPA_SHOW_SQL:false}
+    show-sql: ${JPA_SHOW_SQL:true}
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.SQLServer2016Dialect
-        jdbc:
-          batch_size: 20
-
-  # ========== SERVER ==========
-  server:
-    port: ${PORT:8080}  # ¡IMPORTANTE! Render/Azure usan PORT
+        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.MySQL8Dialect}
+        format_sql: ${HIBERNATE_FORMAT_SQL:true}
+        hbm2ddl:
+          auto: ${HIBERNATE_HBM2DDL_AUTO:update}
 
   # ========== ACTUATOR ==========
   management:
@@ -44,5 +42,45 @@ spring:
 # ========== LOGGING ==========
 logging:
   level:
+    root: ${LOG_LEVEL:INFO}
     org.springframework.web: INFO
     com.zaxxer.hikari: DEBUG
+
+# ========== SERVER ==========
+server:
+  port: ${SERVER_PORT:${PORT:4002}}
+
+# =============================================
+# PERFIL: producción (opcional, SQL Server en nube)
+# =============================================
+---
+spring:
+  config:
+    activate:
+      on-profile: production
+  datasource:
+    url: jdbc:sqlserver://${DB_HOST:user-mysql.database.windows.net}:${DB_PORT:1433};database=${DB_NAME:don_papa};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30
+    username: ${DB_USERNAME:donpapamaster@user-mysql}
+    password: ${DB_PASSWORD:MiContraseñaSegura123!}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    hikari:
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:5}
+      initialization-fail-timeout: ${DB_INIT_FAIL_TIMEOUT:-1}
+      connection-test-query: ${DB_CONNECTION_TEST_QUERY:SELECT 1}
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        format_sql: false
+        hbm2ddl:
+          auto: ${HIBERNATE_HBM2DDL_AUTO:update}
+
+logging:
+  level:
+    root: INFO
+    com.zaxxer.hikari: INFO

@@ -5,6 +5,7 @@ import com.users.UsuariosYEmpleados.domain.entity.Usuario;
 import com.users.UsuariosYEmpleados.domain.repositories.ClienteRepository;
 import com.users.UsuariosYEmpleados.domain.repositories.UsuarioRepository;
 import com.users.UsuariosYEmpleados.dto.ClientDTO;
+import com.users.UsuariosYEmpleados.dto.ClientEnrichedDTO;
 import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 
 import org.springframework.stereotype.Service;
@@ -50,6 +51,19 @@ public class clientService {
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    public List<ClientEnrichedDTO> findAllEnriched() {
+        return clienteRepository.findAll()
+                .stream()
+                .map(this::convertToEnrichedDTO)
+                .collect(Collectors.toList());
+    }
+
+    public ClientEnrichedDTO findByIdEnriched(Integer id) {
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cliente no encontrado con id: " + id));
+        return convertToEnrichedDTO(cliente);
     }
 
     public ClientDTO createForExistingUser(Integer idUsuario, ClientDTO clientData) {
@@ -108,6 +122,25 @@ public class clientService {
             cliente.getNombre(),
             cliente.getTelefono(),
             correo,
+            activo
+        );
+    }
+
+    private ClientEnrichedDTO convertToEnrichedDTO(Cliente cliente) {
+        Usuario usuario = usuarioRepository.findById(cliente.getIdUsuario())
+                .orElse(null);
+        
+        String correo = usuario != null ? usuario.getCorreo() : null;
+        TipoUsuario tipoUsuario = usuario != null ? usuario.getTipoUsuario() : null;
+        Boolean activo = usuario != null ? usuario.getActivo() : null;
+        
+        return new ClientEnrichedDTO(
+            cliente.getIdUsuario(),
+            cliente.getDireccion(),
+            cliente.getNombre(),
+            cliente.getTelefono(),
+            correo,
+            tipoUsuario,
             activo
         );
     }

@@ -1,6 +1,7 @@
 package main.java.com.users.UsuariosYEmpleados.controller;
 
 import com.users.UsuariosYEmpleados.dto.ClientDTO;
+import com.users.UsuariosYEmpleados.dto.ClientEnrichedDTO;
 import com.users.UsuariosYEmpleados.service.clientService;
 import com.users.UsuariosYEmpleados.util.JwtUtils;
 import org.springframework.http.HttpStatus;
@@ -52,6 +53,21 @@ public class ClientController {
         }
         List<ClientDTO> clientes = clientService.findByNombre(nombre.trim());
         return ResponseEntity.ok(clientes);
+    }
+
+    @GetMapping("/enriquecido")
+    public ResponseEntity<List<ClientEnrichedDTO>> getAllEnriched() {
+        return ResponseEntity.ok(clientService.findAllEnriched());
+    }
+
+    @GetMapping("/enriquecido/{id}")
+    public ResponseEntity<?> getByIdEnriched(@PathVariable Integer id) {
+        try {
+            return ResponseEntity.ok(clientService.findByIdEnriched(id));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", ex.getMessage()));
+        }
     }
 
     @PostMapping("/{idUsuario}")

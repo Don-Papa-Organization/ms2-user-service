@@ -21,6 +21,10 @@ public class SecurityConfig {
                                                 // Rutas públicas
                                                 .requestMatchers("/api/auth/**").permitAll() // Login/registro/logout sin autenticación
                                                 
+                                                // Rutas específicas de clientes - solo administrador (excepto crear que requiere autenticación)
+                                                .requestMatchers("POST", "/api/clientes/crear").authenticated() // Crear cliente como cliente autenticado
+                                                .requestMatchers("/api/clientes/**").hasRole("administrador")
+                                                
                                                 // Rutas específicas de empleados - solo administrador
                                                 .requestMatchers("/api/empleados").hasRole("administrador") // GET all, POST create
                                                 .requestMatchers("/api/empleados/{id}").hasRole("administrador") // GET by id, PUT, DELETE

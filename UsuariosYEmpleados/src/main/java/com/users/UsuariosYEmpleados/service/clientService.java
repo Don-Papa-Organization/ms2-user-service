@@ -5,6 +5,7 @@ import com.users.UsuariosYEmpleados.domain.entity.Usuario;
 import com.users.UsuariosYEmpleados.domain.repositories.ClienteRepository;
 import com.users.UsuariosYEmpleados.domain.repositories.UsuarioRepository;
 import com.users.UsuariosYEmpleados.dto.ClientDTO;
+import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +50,32 @@ public class clientService {
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    public ClientDTO createForExistingUser(Integer idUsuario, ClientDTO clientData) {
+        Usuario usuario = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + idUsuario));
+
+        if (usuario.getTipoUsuario() != TipoUsuario.cliente) {
+            throw new RuntimeException("El usuario no es de tipo cliente");
+        }
+
+        if (clienteRepository.existsById(idUsuario)) {
+            throw new RuntimeException("Ya existe un cliente asociado a este usuario");
+        }
+
+        if (clientData.getTelefono() != null && clienteRepository.existsByTelefono(clientData.getTelefono())) {
+            throw new RuntimeException("El teléfono ya está registrado para otro cliente");
+        }
+
+        Cliente cliente = new Cliente();
+        cliente.setIdUsuario(idUsuario);
+        cliente.setDireccion(clientData.getDireccion());
+        cliente.setNombre(clientData.getNombre());
+        cliente.setTelefono(clientData.getTelefono());
+
+        Cliente saved = clienteRepository.save(cliente);
+        return convertToDTO(saved);
     }
     
     public ClientDTO save(Cliente cliente) {

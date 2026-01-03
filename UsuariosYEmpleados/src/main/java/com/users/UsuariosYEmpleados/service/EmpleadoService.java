@@ -3,7 +3,7 @@ package com.users.UsuariosYEmpleados.service;
 import com.users.UsuariosYEmpleados.domain.entity.Empleado;
 import com.users.UsuariosYEmpleados.domain.entity.Usuario;
 import com.users.UsuariosYEmpleados.domain.repositories.EmpleadoRepository;
-import com.users.UsuariosYEmpleados.dto.EmpleadoDTO;
+import com.users.UsuariosYEmpleados.domain.dto.EmpleadoDTO;
 import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,19 +39,19 @@ public class EmpleadoService {
 
     public EmpleadoDTO findByDocumento(String documento) {
         Empleado empleado = empleadoRepository.findByDocumento(documento)
-                .orElseThrow(() -> new RuntimeException("Empleado no encontrado con documento: " + documento));
+                .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado con documento: " + documento));
         return convertToDTO(empleado);
     }
 
     public EmpleadoDTO findByTelefono(String telefono) {
         Empleado empleado = empleadoRepository.findByTelefono(telefono)
-                .orElseThrow(() -> new RuntimeException("Empleado no encontrado con teléfono: " + telefono));
+                .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado con teléfono: " + telefono));
         return convertToDTO(empleado);
     }
 
     public EmpleadoDTO findByUsuarioId(Integer idUsuario) {
         Empleado empleado = empleadoRepository.findByIdUsuario(idUsuario)
-                .orElseThrow(() -> new RuntimeException("Empleado no encontrado para usuario id: " + idUsuario));
+                .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado para usuario id: " + idUsuario));
         return convertToDTO(empleado);
     }
 
@@ -85,25 +85,24 @@ public class EmpleadoService {
         // Validar documento único
         if (empleado.getDocumento() != null &&
                 empleadoRepository.existsByDocumento(empleado.getDocumento())) {
-            throw new RuntimeException("Ya existe un empleado con el documento: " + empleado.getDocumento());
+            throw new IllegalArgumentException("Ya existe un empleado con el documento: " + empleado.getDocumento());
         }
 
         // Validar teléfono único
         if (empleado.getTelefono() != null &&
                 empleadoRepository.findByTelefono(empleado.getTelefono()).isPresent()) {
-            throw new RuntimeException("Ya existe un empleado con el teléfono: " + empleado.getTelefono());
+            throw new IllegalArgumentException("Ya existe un empleado con el teléfono: " + empleado.getTelefono());
         }
 
         // Asegurar que el usuario sea de tipo empleado y esté gestionado
         if (empleado.getIdUsuario() != null) {
-            // Buscamos la entidad gestionada por Hibernate
             Usuario managedUsuario = usuarioRepository.findById(empleado.getIdUsuario())
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
             managedUsuario.setTipoUsuario(TipoUsuario.empleado);
-            // El idUsuario ya está establecido en el empleado
+            usuarioRepository.save(managedUsuario);
         } else {
-            throw new RuntimeException("El empleado debe tener un idUsuario válido");
+            throw new IllegalArgumentException("El empleado debe tener un idUsuario válido");
         }
 
         Empleado savedEmpleado = empleadoRepository.save(empleado);
@@ -111,22 +110,21 @@ public class EmpleadoService {
     }
 
     public EmpleadoDTO update(Integer id, EmpleadoDTO empleadoDTO) {
-        // Verificar existencia
         Empleado existingEmpleado = empleadoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Empleado no encontrado con id: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado con id: " + id));
 
         // Validar documento único (si cambia)
         if (empleadoDTO.getDocumento() != null &&
                 !empleadoDTO.getDocumento().equals(existingEmpleado.getDocumento()) &&
                 empleadoRepository.existsByDocumento(empleadoDTO.getDocumento())) {
-            throw new RuntimeException("El documento ya está en uso por otro empleado");
+            throw new IllegalArgumentException("El documento ya está en uso por otro empleado");
         }
 
         // Validar teléfono único (si cambia)
         if (empleadoDTO.getTelefono() != null &&
                 !empleadoDTO.getTelefono().equals(existingEmpleado.getTelefono()) &&
                 empleadoRepository.findByTelefono(empleadoDTO.getTelefono()).isPresent()) {
-            throw new RuntimeException("El teléfono ya está en uso por otro empleado");
+            throw new IllegalArgumentException("El teléfono ya está en uso por otro empleado");
         }
 
         // Actualizar campos

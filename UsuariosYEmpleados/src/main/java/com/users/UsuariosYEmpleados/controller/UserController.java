@@ -1,7 +1,7 @@
-package main.java.com.users.UsuariosYEmpleados.controller;
+package com.users.UsuariosYEmpleados.controller;
 
-import com.users.UsuariosYEmpleados.dto.UserResponseDTO;
-import com.users.UsuariosYEmpleados.dto.UserDTO;
+import com.users.UsuariosYEmpleados.domain.dto.UserResponseDTO;
+import com.users.UsuariosYEmpleados.domain.dto.UserDTO;
 import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 import com.users.UsuariosYEmpleados.service.UserService;
 import org.springframework.http.HttpStatus;

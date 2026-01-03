@@ -31,9 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = null;
 
-        // 1. Obtener el token de las cookies (Mirroring logic: const cookieHeader =
-        // req.headers.cookie...)
-        // En Java HttpServletRequest, es más seguro y estándar usar getCookies()
+        // Leer token desde cookie segura
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
                 if ("accessToken".equals(cookie.getName())) {
@@ -43,44 +41,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        if (token != null) {
-            // 2. Verificar el token
-            try {
+        try {
+            if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 Claims claims = jwtUtils.verifyAccessToken(token);
 
-                if (claims != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    // Extraer información del payload (claims)
-                    Integer userId = claims.get("id", Integer.class);
-                    String tipoUsuario = claims.get("tipoUsuario", String.class);
+                Integer userId = claims.get("id", Integer.class);
+                String tipoUsuario = claims.get("tipoUsuario", String.class);
 
-                    // Crear lista de autoridades basada en tipoUsuario
-                    List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-                    if (tipoUsuario != null) {
-                        // Agregar rol en formato Spring Security: ROLE_TIPOUSUARIO
-                        String rol = "ROLE_" + tipoUsuario.toUpperCase();
-                        authorities.add(new SimpleGrantedAuthority(rol));
-                    }
-
-                    // 3. Crear objeto de autenticación
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userId != null ? userId.toString() : "unknown", null, authorities);
-
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                    // 4. Establecer en el contexto de seguridad
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                if (tipoUsuario != null) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + tipoUsuario.toUpperCase()));
                 }
-            } catch (io.jsonwebtoken.JwtException e) {
-                // Token inválido, expirado o mal formado: responder con 401 y detener filtro
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.setContentType("application/json");
-                response.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"" + e.getMessage() + "\"}");
-                return; // Importante: detener la cadena de filtros aquí
+
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        userId != null ? userId.toString() : "unknown",
+                        null,
+                        authorities);
+
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
             }
+        } catch (io.jsonwebtoken.JwtException e) {
+            writeUnauthorized(response);
+            return;
         }
 
-        // Continúa el filtro (si no hubo token o fue inválido, el usuario seguirá como
-        // anónimo)
         filterChain.doFilter(request, response);
+    }
+
+    private void writeUnauthorized(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"error\":\"Unauthorized\"}");
     }
 }

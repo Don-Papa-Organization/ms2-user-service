@@ -1,4 +1,4 @@
-package com.users.UsuariosYEmpleados.dto;
+package com.users.UsuariosYEmpleados.domain.dto;
 
 import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 

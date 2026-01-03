@@ -1,8 +1,8 @@
-package main.java.com.users.UsuariosYEmpleados.controller;
+package com.users.UsuariosYEmpleados.controller;
 
-import com.users.UsuariosYEmpleados.dto.ClientDTO;
-import com.users.UsuariosYEmpleados.dto.ClientEnrichedDTO;
-import com.users.UsuariosYEmpleados.service.clientService;
+import com.users.UsuariosYEmpleados.domain.dto.ClientDTO;
+import com.users.UsuariosYEmpleados.domain.dto.ClientEnrichedDTO;
+import com.users.UsuariosYEmpleados.service.ClientService;
 import com.users.UsuariosYEmpleados.util.JwtUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +22,10 @@ import java.util.Map;
 @RequestMapping("/api/clientes")
 public class ClientController {
 
-    private final clientService clientService;
+    private final ClientService clientService;
     private final JwtUtils jwtUtils;
 
-    public ClientController(clientService clientService, JwtUtils jwtUtils) {
+    public ClientController(ClientService clientService, JwtUtils jwtUtils) {
         this.clientService = clientService;
         this.jwtUtils = jwtUtils;
     }
@@ -47,12 +47,13 @@ public class ClientController {
 
     @GetMapping("/buscar")
     public ResponseEntity<?> getByNombre(@RequestParam String nombre) {
-        if (nombre == null || nombre.trim().isEmpty()) {
+        try {
+            List<ClientDTO> clientes = clientService.findByNombre(nombre);
+            return ResponseEntity.ok(clientes);
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", "El nombre es requerido"));
+                    .body(Map.of("message", e.getMessage()));
         }
-        List<ClientDTO> clientes = clientService.findByNombre(nombre.trim());
-        return ResponseEntity.ok(clientes);
     }
 
     @GetMapping("/enriquecido")
@@ -74,15 +75,11 @@ public class ClientController {
     public ResponseEntity<?> createForUser(@PathVariable Integer idUsuario,
                                            @RequestBody ClientDTO body) {
         try {
-            if (body == null || body.getDireccion() == null || body.getNombre() == null || body.getTelefono() == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "direccion, nombre y telefono son obligatorios"));
-            }
             ClientDTO created = clientService.createForExistingUser(idUsuario, body);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        } catch (RuntimeException ex) {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", ex.getMessage()));
+                    .body(Map.of("message", e.getMessage()));
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Error al crear cliente"));
@@ -97,7 +94,7 @@ public class ClientController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("message", "No autenticado"));
             }
-
+            
             Map<String, Object> payload = jwtUtils.verifyAccessToken(token);
             Integer idUsuario = (Integer) payload.get("id");
 
@@ -105,20 +102,15 @@ public class ClientController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("message", "ID de usuario no encontrado en token"));
             }
-
-            if (body == null || body.getDireccion() == null || body.getNombre() == null || body.getTelefono() == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "direccion, nombre y telefono son obligatorios"));
-            }
             
             ClientDTO created = clientService.createForExistingUser(idUsuario, body);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (io.jsonwebtoken.JwtException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "Token inválido o expirado"));
-        } catch (RuntimeException ex) {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", ex.getMessage()));
+                    .body(Map.of("message", e.getMessage()));
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Error al crear cliente"));

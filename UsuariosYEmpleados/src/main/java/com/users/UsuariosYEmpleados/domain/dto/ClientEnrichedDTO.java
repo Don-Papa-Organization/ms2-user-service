@@ -1,23 +1,26 @@
-package com.users.UsuariosYEmpleados.dto;
+package com.users.UsuariosYEmpleados.domain.dto;
 
+import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 
-public class ClientDTO {
+public class ClientEnrichedDTO {
     private Integer idUsuario;
     private String direccion;
     private String nombre;
     private String telefono;
     private String correo;
+    private TipoUsuario tipoUsuario;
     private Boolean activo;
 
-    public ClientDTO() {}
+    public ClientEnrichedDTO() {}
 
-    public ClientDTO(Integer idUsuario, String direccion, String nombre, String telefono,
-                     String correo, Boolean activo) {
+    public ClientEnrichedDTO(Integer idUsuario, String direccion, String nombre, String telefono,
+                             String correo, TipoUsuario tipoUsuario, Boolean activo) {
         this.idUsuario = idUsuario;
         this.direccion = direccion;
         this.nombre = nombre;
         this.telefono = telefono;
         this.correo = correo;
+        this.tipoUsuario = tipoUsuario;
         this.activo = activo;
     }
 
@@ -35,6 +38,9 @@ public class ClientDTO {
 
     public String getCorreo() { return correo; }
     public void setCorreo(String correo) { this.correo = correo; }
+
+    public TipoUsuario getTipoUsuario() { return tipoUsuario; }
+    public void setTipoUsuario(TipoUsuario tipoUsuario) { this.tipoUsuario = tipoUsuario; }
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }

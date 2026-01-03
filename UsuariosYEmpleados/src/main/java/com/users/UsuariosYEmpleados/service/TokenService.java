@@ -4,7 +4,7 @@ import com.users.UsuariosYEmpleados.domain.entity.ManejadorTokens;
 import com.users.UsuariosYEmpleados.domain.entity.Usuario;
 import com.users.UsuariosYEmpleados.domain.repositories.ManejadorTokensRepository;
 import com.users.UsuariosYEmpleados.domain.repositories.UsuarioRepository;
-import com.users.UsuariosYEmpleados.dto.TokenDriverDTO;
+import com.users.UsuariosYEmpleados.domain.dto.TokenDriverDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,7 +68,8 @@ public class TokenService {
         
         // Crear nuevo token
         ManejadorTokens token = new ManejadorTokens();
-        token.setToken(generateToken());
+        String tokenValue = generateToken();
+        token.setToken(tokenValue);
         token.setCreadoEn(new Date());
         
         // Calcular fecha de expiraci\u00f3n
@@ -125,16 +126,14 @@ public class TokenService {
     
     public boolean isValidToken(String token) {
         Optional<ManejadorTokens> tokenOpt = tokenRepository.findByToken(token);
-        
         if (tokenOpt.isEmpty()) {
             return false;
         }
-        
+
         ManejadorTokens tokenEntity = tokenOpt.get();
         Date now = new Date();
-        
-        // Verificar que no esté expirado
-        return tokenEntity.getExpiraEn() == null || 
+
+        return tokenEntity.getExpiraEn() == null ||
                tokenEntity.getExpiraEn().after(now);
     }
     

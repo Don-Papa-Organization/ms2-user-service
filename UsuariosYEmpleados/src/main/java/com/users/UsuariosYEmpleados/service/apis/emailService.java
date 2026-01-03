@@ -9,12 +9,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 @Service
-public class emailService {
+public class EmailService {
     
     private final RestTemplate restTemplate;
     private final String emailServiceUrl;
     
-    public emailService(
+    public EmailService(
         @Value("${EMAIL_SERVICE_URL:http://email-service:4007}") String emailServiceUrl
     ) {
         this.restTemplate = new RestTemplate();

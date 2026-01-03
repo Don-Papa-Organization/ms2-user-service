@@ -1,9 +1,9 @@
 package com.users.UsuariosYEmpleados.controller;
 
 import com.users.UsuariosYEmpleados.domain.entity.Empleado;
-import com.users.UsuariosYEmpleados.dto.UserDTO;
-import com.users.UsuariosYEmpleados.dto.EmpleadoDTO;
-import com.users.UsuariosYEmpleados.dto.CrearEmpleadoDTO;
+import com.users.UsuariosYEmpleados.domain.dto.UserDTO;
+import com.users.UsuariosYEmpleados.domain.dto.EmpleadoDTO;
+import com.users.UsuariosYEmpleados.domain.dto.CrearEmpleadoDTO;
 import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 import com.users.UsuariosYEmpleados.service.EmpleadoService;
 import com.users.UsuariosYEmpleados.service.UserService;

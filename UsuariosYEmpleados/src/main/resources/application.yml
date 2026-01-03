@@ -4,9 +4,9 @@ spring:
 
   # ========== DATASOURCE (MySQL - local o Docker) ==========
   datasource:
-    url: jdbc:mysql://${DB_HOST:user-mysql}:${DB_PORT:3306}/${DB_NAME:don_papa}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:usuarios}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:MiContraseñaSegura123!}
+    password: ${DB_PASSWORD:password}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}
@@ -46,6 +46,10 @@ logging:
     org.springframework.web: INFO
     com.zaxxer.hikari: DEBUG
 
+# Secrets con valores predeterminados seguros (reemplazar en despliegue)
+JWT_SECRET: ${JWT_SECRET:change-me-access-secret}
+JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:change-me-refresh-secret}
+
 # ========== SERVER ==========
 server:
   port: ${SERVER_PORT:${PORT:4002}}
@@ -59,9 +63,9 @@ spring:
     activate:
       on-profile: production
   datasource:
-    url: jdbc:sqlserver://${DB_HOST:user-mysql.database.windows.net}:${DB_PORT:1433};database=${DB_NAME:don_papa};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30
-    username: ${DB_USERNAME:donpapamaster@user-mysql}
-    password: ${DB_PASSWORD:MiContraseñaSegura123!}
+    url: jdbc:sqlserver://${DB_HOST}:${DB_PORT};database=${DB_NAME};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     hikari:
       connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}

@@ -2,7 +2,7 @@ package com.users.UsuariosYEmpleados.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -20,25 +20,25 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(auth -> auth
                                                 // Rutas públicas
                                                 .requestMatchers("/api/auth/**").permitAll() // Login/registro/logout sin autenticación
-                                                
+
                                                 // Rutas específicas de clientes - solo administrador (excepto crear que requiere autenticación)
-                                                .requestMatchers("POST", "/api/clientes/crear").authenticated() // Crear cliente como cliente autenticado
-                                                .requestMatchers("/api/clientes/**").hasRole("administrador")
-                                                
+                                                .requestMatchers(HttpMethod.POST, "/api/clientes/crear").authenticated() // Crear cliente autenticado
+                                                .requestMatchers("/api/clientes/**").hasRole("ADMINISTRADOR")
+                                                .requestMatchers("/api/debug/**").hasRole("ADMINISTRADOR")
                                                 // Rutas de usuarios - solo administrador
-                                                .requestMatchers("/api/usuarios/**").hasRole("administrador")
-                                                
+                                                .requestMatchers("/api/usuarios/**").hasRole("ADMINISTRADOR")
+
                                                 // Rutas específicas de empleados - solo administrador
-                                                .requestMatchers("/api/empleados").hasRole("administrador") // GET all, POST create
-                                                .requestMatchers("/api/empleados/{id}").hasRole("administrador") // GET by id, PUT, DELETE
-                                                .requestMatchers("/api/empleados/completo").hasRole("administrador") // POST completo
-                                                .requestMatchers("/api/empleados/cargo/**").hasRole("administrador") // GET by cargo
-                                                .requestMatchers("/api/empleados/buscar").hasRole("administrador") // GET buscar
-                                                .requestMatchers("/api/empleados/verificar-documento/**").hasRole("administrador") // GET verificar
-                                                
+                                                .requestMatchers("/api/empleados").hasRole("ADMINISTRADOR") // GET all, POST create
+                                                .requestMatchers("/api/empleados/{id}").hasRole("ADMINISTRADOR") // GET by id, PUT, DELETE
+                                                .requestMatchers("/api/empleados/completo").hasRole("ADMINISTRADOR") // POST completo
+                                                .requestMatchers("/api/empleados/cargo/**").hasRole("ADMINISTRADOR") // GET by cargo
+                                                .requestMatchers("/api/empleados/buscar").hasRole("ADMINISTRADOR") // GET buscar
+                                                .requestMatchers("/api/empleados/verificar-documento/**").hasRole("ADMINISTRADOR") // GET verificar
+
                                                 // Ruta que permite administrador y empleado consultar su propio documento
-                                                .requestMatchers("/api/empleados/documento/**").hasAnyRole("administrador", "empleado")
-                                                
+                                                .requestMatchers("/api/empleados/documento/**").hasAnyRole("ADMINISTRADOR", "EMPLEADO")
+
                                                 // Cualquier otra ruta requiere autenticación (sin rol específico)
                                                 .anyRequest().authenticated()
                                 )

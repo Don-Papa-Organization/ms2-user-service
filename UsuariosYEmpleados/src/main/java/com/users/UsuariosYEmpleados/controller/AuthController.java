@@ -1,11 +1,11 @@
 package com.users.UsuariosYEmpleados.controller;
 
-import com.users.UsuariosYEmpleados.dto.UserDTO;
-import com.users.UsuariosYEmpleados.dto.TokenDriverDTO;
+import com.users.UsuariosYEmpleados.domain.dto.UserDTO;
+import com.users.UsuariosYEmpleados.domain.dto.TokenDriverDTO;
 import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 import com.users.UsuariosYEmpleados.service.UserService;
 import com.users.UsuariosYEmpleados.service.TokenService;
-import com.users.UsuariosYEmpleados.service.apis.emailService;
+import com.users.UsuariosYEmpleados.service.apis.EmailService;
 import com.users.UsuariosYEmpleados.util.BCryptUtils;
 import com.users.UsuariosYEmpleados.util.JwtUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,54 +26,31 @@ public class AuthController {
 
     private final UserService userService;
     private final TokenService tokenService;
-    private final emailService emailService;
-    private final BCryptUtils bCryptUtils;
+    private final EmailService emailService;
     private final JwtUtils jwtUtils;
     private final String nodeEnv;
 
     public AuthController(UserService userService,
             TokenService tokenService,
-            emailService emailService,
-            BCryptUtils bCryptUtils,
+            EmailService emailService,
             JwtUtils jwtUtils,
             @Value("${spring.profiles.active:development}") String nodeEnv) {
         this.userService = userService;
         this.tokenService = tokenService;
         this.emailService = emailService;
-        this.bCryptUtils = bCryptUtils;
         this.jwtUtils = jwtUtils;
         this.nodeEnv = nodeEnv;
     }
 
-    private static final Pattern EMAIL_REGEX = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
-    private static final Pattern PASSWORD_REGEX = Pattern
-            .compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[A-Za-z\\d@$!%*?&]{8,}$");
-    private static final String MSG_EMAIL_PASSWORD_REQUIRED = "Correo y contraseña son obligatorios";
-
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Map<String, Object> requestBody) {
         try {
-            // Validaciones de entrada
             String correo = (String) requestBody.get("correo");
             String contrasena = (String) requestBody.get("contrasena");
             String tipoUsuarioStr = (String) requestBody.get("tipoUsuario");
 
-            System.out.println("[REGISTER] Datos recibidos - correo: " + correo +
-                    ", tipoUsuario: " + tipoUsuarioStr);
-
-            if (isBlank(correo) || isBlank(contrasena)) {
-                return badRequest(MSG_EMAIL_PASSWORD_REQUIRED);
-            }
-            if (!EMAIL_REGEX.matcher(correo).matches()) {
-                return badRequest("Formato de correo inválido");
-            }
-            if (!PASSWORD_REGEX.matcher(contrasena).matches()) {
-                return badRequest(
-                        "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número");
-            }
-
-            // Validar tipoUsuario
-            TipoUsuario tipoUsuario = TipoUsuario.cliente; // valor por defecto
+            // Parsear tipo de usuario
+            TipoUsuario tipoUsuario = TipoUsuario.cliente;
             if (tipoUsuarioStr != null) {
                 try {
                     tipoUsuario = TipoUsuario.valueOf(tipoUsuarioStr.toLowerCase());
@@ -83,65 +60,23 @@ public class AuthController {
                 }
             }
 
-            // Validar correo duplicado usando UserService
-            if (userService.existsByCorreo(correo)) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body(Map.of("message", "El correo ya está registrado"));
-            }
+            // Registrar usuario (validaciones en UserService)
+            UserDTO usuarioCreado = userService.register(correo, contrasena, tipoUsuario);
 
-            // Hash de contraseña
-            String hashedPassword = bCryptUtils.hashPassword(contrasena);
+            // Crear y enviar token de verificación
+            TokenDriverDTO tokenDTO = tokenService.createToken(usuarioCreado.getIdUsuario(), 1);
+            emailService.sendVerificationEmail(correo, tokenDTO.getToken());
 
-            // Crear DTO para usuario
-            UserDTO userDTO = new UserDTO();
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of(
+                            "message",
+                            "Usuario registrado correctamente. Revisa tu correo para verificar la cuenta.",
+                            "userId", usuarioCreado.getIdUsuario()));
 
-            userDTO.setCorreo(correo);
-            userDTO.setContrasena(hashedPassword);
-            userDTO.setTipoUsuario(tipoUsuario);
-
-            // En desarrollo, activar automáticamente; en producción, requiere verificación
-            // de email
-            boolean activo = false;
-            userDTO.setActivo(activo);
-
-            // Crear usuario usando UserService
-            UserDTO usuarioCreado = userService.create(userDTO);
-
-            System.out.println("[REGISTER] Usuario creado: { id: " + usuarioCreado.getIdUsuario() +
-                    ", correo: " + usuarioCreado.getCorreo() +
-                    ", activo: " + usuarioCreado.getActivo() +
-                    ", env: " + nodeEnv + " }");
-
-            // Si no está activo, crear y enviar token de verificación
-            if (!activo) {
-                // Crear token de verificación usando TokenService
-                TokenDriverDTO TokenDriverDTO = tokenService.createToken(
-                        usuarioCreado.getIdUsuario(),
-                        1 // Expira en 1 día para verificación
-                );
-
-                // Enviar correo de verificación
-                emailService.sendVerificationEmail(correo, TokenDriverDTO.getToken());
-
-                return ResponseEntity.status(HttpStatus.CREATED)
-                        .body(Map.of(
-                                "message",
-                                "Usuario registrado correctamente. Revisa tu correo para verificar la cuenta.",
-                                "userId", usuarioCreado.getIdUsuario()));
-            } else {
-                return ResponseEntity.status(HttpStatus.CREATED)
-                        .body(Map.of(
-                                "message", "Usuario registrado y activado correctamente.",
-                                "userId", usuarioCreado.getIdUsuario()));
-            }
-
-        } catch (RuntimeException e) {
-            // Manejar excepciones específicas del servicio
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", e.getMessage()));
         } catch (Exception error) {
-            System.err.println("[REGISTER ERROR] " + error.getMessage());
-            error.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Error interno al registrar usuario"));
         }
@@ -155,49 +90,34 @@ public class AuthController {
                         .body(Map.of("message", "Token de verificación requerido"));
             }
 
-            // Validar token usando TokenService
+            // Validar token
             if (!tokenService.isValidToken(token)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("message", "Token de verificación inválido o expirado"));
             }
 
-            // Buscar token usando TokenService
-            TokenDriverDTO TokenDriverDTO = tokenService.findByToken(token);
-
-            if (TokenDriverDTO == null) {
+            TokenDriverDTO tokenDTO = tokenService.findByToken(token);
+            if (tokenDTO == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("message", "Token de verificación no encontrado"));
             }
 
-            // Buscar usuario usando UserService
-            UserDTO usuario = userService.findById(TokenDriverDTO.getIdUsuario());
+            // Activar usuario (validación en UserService)
+            userService.activateUser(tokenDTO.getIdUsuario());
+            
+            UserDTO usuario = userService.findById(tokenDTO.getIdUsuario());
 
-            if (usuario == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "Usuario no encontrado para este token"));
-            }
-
-            if (Boolean.TRUE.equals(usuario.getActivo())) {
-                return ResponseEntity.ok(Map.of("message", "El usuario ya está verificado"));
-            }
-
-            // Actualizar usuario a activo usando UserService
-            UserDTO updateDTO = new UserDTO();
-            updateDTO.setActivo(true);
-            UserDTO updated = userService.update(usuario.getIdUsuario(), updateDTO);
-
-            // Eliminar el token de verificación ya usado
+            // Eliminar token usado
             tokenService.deleteByToken(token);
 
             return ResponseEntity.ok(Map.of(
                     "message", "Se verificó el correo " + usuario.getCorreo(),
                     "email", usuario.getCorreo()));
 
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", e.getMessage()));
         } catch (Exception error) {
-            System.err.println("[VERIFY     AIL ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Error interno al verificar email"));
         }
@@ -210,53 +130,8 @@ public class AuthController {
             String correo = (String) requestBody.get("correo");
             String contrasena = (String) requestBody.get("contrasena");
 
-            // Validar campos requeridos
-            if (correo == null || contrasena == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "Email y contraseña son obligatorios"));
-            }
-
-            // Validar formato de email
-            if (!EMAIL_REGEX.matcher(correo).matches()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "Formato de email inválido"));
-            }
-
-            // Buscar usuario usando UserService
-            UserDTO user;
-            try {
-                System.out.println("/////////////////////");
-                System.out.println(correo);
-                user = userService.findByCorreoForLogin(correo);
-                System.out.println(user);
-            } catch (RuntimeException e) {
-                System.out.println("//////////////////////////// ERROR IN LOGIN ////////////////////////////");
-                e.printStackTrace();
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("message", "Error: " + e.getMessage()));
-            }
-
-            System.out.println("[LOGIN] Usuario encontrado: { id: " + user.getIdUsuario() +
-                    ", correo: " + user.getCorreo() +
-                    ", activo: " + user.getActivo() +
-                    ", tipoUsuario: " + user.getTipoUsuario() + " }");
-
-            // Validar usuario activo
-            if (Boolean.FALSE.equals(user.getActivo())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("message", "El usuario no está activo. Por favor verifica tu correo"));
-            }
-
-            // Validar contraseña
-            // NOTA: userService.findByCorreo no devuelve la contraseña (por seguridad)
-            // Necesitamos un método específico para login que sí devuelva la contraseña
-            // Por ahora, asumimos que BCryptUtils puede verificar directamente
-            boolean isValid = bCryptUtils.comparePassword(contrasena, user.getContrasena());
-
-            if (!isValid) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "Usuario o contraseña incorrectos"));
-            }
+            // Validar login (validaciones en UserService)
+            UserDTO user = userService.validateLogin(correo, contrasena);
 
             // Generar tokens JWT
             Map<String, Object> payload = new HashMap<>();
@@ -264,10 +139,6 @@ public class AuthController {
             payload.put("tipoUsuario", user.getTipoUsuario().toString().toLowerCase());
             payload.put("activo", user.getActivo());
     
-            System.out.println("payload//////////////////////////////////////////////////");
-            System.out.println(payload);
-
-            
             String accessToken = jwtUtils.generateAccessToken(payload);
             String refreshToken = jwtUtils.generateRefreshToken(payload);
 
@@ -286,30 +157,18 @@ public class AuthController {
             refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7 días
             response.addCookie(refreshTokenCookie);
 
-            // Crear token en base de datos usando TokenService
-            tokenService.createToken(user.getIdUsuario(), 7); // Token válido por 7 días
+            return ResponseEntity.ok(Map.of(
+                    "message", "Inicio de sesión exitoso",
+                    "user", Map.of(
+                            "id", user.getIdUsuario(),
+                            "correo", user.getCorreo(),
+                            "tipoUsuario", user.getTipoUsuario(),
+                            "activo", user.getActivo())));
 
-            System.out.println("[LOGIN] Tokens generados exitosamente para usuario: " + user.getCorreo());
-
-            Map<String, Object> responseBody = new HashMap<>();
-            responseBody.put("message", "Inicio de sesión exitoso");
-
-            Map<String, Object> userInfo = new HashMap<>();
-            userInfo.put("userId", user.getIdUsuario());
-            userInfo.put("email", user.getCorreo());
-            userInfo.put("tipoUsuario", user.getTipoUsuario());
-            userInfo.put("activo", user.getActivo());
-
-            responseBody.put("user", userInfo);
-
-            return ResponseEntity.ok(responseBody);
-
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message catch", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", e.getMessage()));
         } catch (Exception error) {
-            System.err.println("[LOGIN ERROR] " + error.getMessage());
-            error.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Error interno al iniciar sesión"));
         }
@@ -421,9 +280,8 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", e.getMessage()));
         } catch (Exception error) {
-            System.err.println("[RESEND VERIFICATION ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error interno al reenviar correo de verificación"));
+                    .body(Map.of("message", "Error al reenviar correo de verificación"));
         }
     }
 
@@ -437,11 +295,9 @@ public class AuthController {
                     tokenService.deleteByToken(refreshToken);
                 } catch (Exception e) {
                     // Si no existe el token, no hay problema
-                    System.out.println("[LOGOUT] Token no encontrado en DB: " + refreshToken);
                 }
             }
 
-            // Eliminar cookies
             Cookie accessTokenCookie = new Cookie("accessToken", null);
             accessTokenCookie.setHttpOnly(true);
             accessTokenCookie.setSecure("production".equals(nodeEnv));
@@ -459,7 +315,6 @@ public class AuthController {
             return ResponseEntity.ok(Map.of("message", "Sesión cerrada exitosamente"));
 
         } catch (Exception error) {
-            System.err.println("[LOGOUT ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Error interno al cerrar sesión"));
         }
@@ -511,7 +366,6 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", e.getMessage()));
         } catch (Exception error) {
-            System.err.println("[PROFILE ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Error interno al obtener perfil"));
         }
@@ -527,14 +381,4 @@ public class AuthController {
                     .body(Map.of("message", "Error al verificar email"));
         }
     }
-
-    private boolean isBlank(String value) {
-        return value == null || value.trim().isEmpty();
-    }
-
-    private ResponseEntity<Map<String, String>> badRequest(String message) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("message", message));
-    }
-
 }

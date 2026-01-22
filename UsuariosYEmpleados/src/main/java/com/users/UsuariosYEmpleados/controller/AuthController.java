@@ -6,7 +6,6 @@ import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 import com.users.UsuariosYEmpleados.service.UserService;
 import com.users.UsuariosYEmpleados.service.TokenService;
 import com.users.UsuariosYEmpleados.service.apis.EmailService;
-import com.users.UsuariosYEmpleados.util.BCryptUtils;
 import com.users.UsuariosYEmpleados.util.JwtUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -15,10 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -187,10 +184,7 @@ public class AuthController {
             // Verificar refreshToken JWT
             Map<String, Object> payload = jwtUtils.verifyRefreshToken(token);
 
-            // Ya no verificamos si payload es null porque verifyRefreshToken ahora lanza
-            // excepción
-            String username = (String) payload.get("sub");
-
+            // Ya no verificamos si payload es null porque verifyRefreshToken ahora lanza excepción
             // Buscar usuario usando UserService
             Integer userId = (Integer) payload.get("id");
             UserDTO user = userService.findById(userId);
@@ -201,11 +195,11 @@ public class AuthController {
             }
 
             // Verificar que el token también exista en nuestra base de datos
-            boolean tokenValidoEnDB = tokenService.isValidTokenForUsuario(token, userId);
-            if (!tokenValidoEnDB) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "Refresh token no válido"));
-            }
+            // boolean tokenValidoEnDB = tokenService.isValidTokenForUsuario(token, userId);
+            // if (!tokenValidoEnDB) {
+            //     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            //             .body(Map.of("message", "Refresh token no válido"));
+            // }
 
             // Generar nuevo accessToken
             Map<String, Object> newPayload = new HashMap<>();
@@ -289,15 +283,7 @@ public class AuthController {
     public ResponseEntity<?> logout(@CookieValue(value = "refreshToken", required = false) String refreshToken,
             HttpServletResponse response) {
         try {
-            // Si tenemos un refresh token, eliminarlo de la base de datos
-            if (refreshToken != null) {
-                try {
-                    tokenService.deleteByToken(refreshToken);
-                } catch (Exception e) {
-                    // Si no existe el token, no hay problema
-                }
-            }
-
+            // Eliminar cookies de autenticación (sistema stateless, no requiere BD)
             Cookie accessTokenCookie = new Cookie("accessToken", null);
             accessTokenCookie.setHttpOnly(true);
             accessTokenCookie.setSecure("production".equals(nodeEnv));
@@ -315,6 +301,7 @@ public class AuthController {
             return ResponseEntity.ok(Map.of("message", "Sesión cerrada exitosamente"));
 
         } catch (Exception error) {
+            System.err.println("[LOGOUT ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Error interno al cerrar sesión"));
         }
@@ -332,17 +319,11 @@ public class AuthController {
             Map<String, Object> payload = jwtUtils.verifyAccessToken(token);
 
             // Ya no verificamos si payload es null
-
-            // Verificar que el token también exista en nuestra base de datos
-            Integer userId = (Integer) payload.get("id");
-            boolean tokenValidoEnDB = tokenService.isValidTokenForUsuario(token, userId);
-
-            if (!tokenValidoEnDB) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "Token no válido"));
-            }
+            // Los accessToken JWT son stateless y no se validan contra la base de datos
+            // Solo verificamos la firma JWT
 
             // Obtener usuario usando UserService
+            Integer userId = (Integer) payload.get("id");
             UserDTO user = userService.findById(userId);
 
             if (user == null) {

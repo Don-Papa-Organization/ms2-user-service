@@ -35,16 +35,7 @@ public class ClientController {
         return ResponseEntity.ok(clientService.findAll());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getById(@PathVariable Integer id) {
-        try {
-            return ResponseEntity.ok(clientService.findById(id));
-        } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", ex.getMessage()));
-        }
-    }
-
+    // Rutas específicas (literales) ANTES que rutas genéricas (PathVariable)
     @GetMapping("/buscar")
     public ResponseEntity<?> getByNombre(@RequestParam String nombre) {
         try {
@@ -65,6 +56,17 @@ public class ClientController {
     public ResponseEntity<?> getByIdEnriched(@PathVariable Integer id) {
         try {
             return ResponseEntity.ok(clientService.findByIdEnriched(id));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", ex.getMessage()));
+        }
+    }
+
+    // Rutas genéricas (PathVariable) DESPUÉS de rutas específicas
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getById(@PathVariable Integer id) {
+        try {
+            return ResponseEntity.ok(clientService.findById(id));
         } catch (RuntimeException ex) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("message", ex.getMessage()));

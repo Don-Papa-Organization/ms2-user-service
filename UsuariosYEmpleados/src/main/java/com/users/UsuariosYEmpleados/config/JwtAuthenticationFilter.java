@@ -29,19 +29,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String token = null;
-
-        // Leer token desde cookie segura
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if ("accessToken".equals(cookie.getName())) {
-                    token = cookie.getValue();
-                    break;
-                }
-            }
-        }
+        String token = extractToken(request);
 
         try {
+            // Si hay token, intentar verificarlo y autenticar
             if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 Claims claims = jwtUtils.verifyAccessToken(token);
 
@@ -61,7 +52,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
+            // Si no hay token, continuar sin autenticación (será manejado por @PreAuthorize si aplica)
         } catch (io.jsonwebtoken.JwtException e) {
+            // Si el token es inválido/expirado, rechazar con 401
             writeUnauthorized(response);
             return;
         }
@@ -73,5 +66,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
         response.getWriter().write("{\"error\":\"Unauthorized\"}");
+    }
+
+    /**
+     * Obtiene el token ya sea del header Authorization: Bearer <token> o de la cookie accessToken.
+     */
+    private String extractToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("accessToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+
+        return null;
     }
 }

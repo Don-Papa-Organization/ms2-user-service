@@ -71,22 +71,18 @@ public class EmpleadoController {
                         Map<String, Object> item = new HashMap<>();
 
                         // Información del empleado
-                        item.put("id", emp.getIdUsuario());
                         item.put("idUsuario", emp.getIdUsuario());
                         item.put("nombre", emp.getNombre());
                         item.put("documento", emp.getDocumento());
                         item.put("telefono", emp.getTelefono());
                         item.put("cargo", emp.getCargo());
-
+						
                         // Información del usuario (si está disponible)
-                        Map<String, Object> usuarioInfo = new HashMap<>();
-                        usuarioInfo.put("correo", emp.getCorreo());
-                        usuarioInfo.put("activo", emp.getActivo());
+                        item.put("correo", emp.getCorreo());
+                        item.put("activo", emp.getActivo());
                         // TipoUsuario no está en EmpleadoDTO actualmente, necesitaríamos agregarlo
                         // usuarioInfo.put("tipoUsuario", TipoUsuario.empleado); // Asumimos que es
                         // empleado
-
-                        item.put("usuario", usuarioInfo);
 
                         return item;
                     })
@@ -117,19 +113,17 @@ public class EmpleadoController {
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", empleado.getIdUsuario());
-            response.put("idUsuario", empleado.getIdUsuario());
             response.put("nombre", empleado.getNombre());
             response.put("documento", empleado.getDocumento());
             response.put("telefono", empleado.getTelefono());
             response.put("cargo", empleado.getCargo());
 
             // Información del usuario
-            Map<String, Object> usuarioInfo = new HashMap<>();
-            usuarioInfo.put("correo", empleado.getCorreo());
-            usuarioInfo.put("activo", empleado.getActivo());
-            usuarioInfo.put("tipoUsuario", TipoUsuario.empleado); // Asumimos empleado
+            
+            response.put("correo", empleado.getCorreo());
+            response.put("activo", empleado.getActivo());
 
-            response.put("usuario", usuarioInfo);
+            
 
             return ResponseEntity.ok(response);
 

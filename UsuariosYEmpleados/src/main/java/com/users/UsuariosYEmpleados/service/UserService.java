@@ -96,6 +96,73 @@ public class UserService {
         usuarioRepository.save(usuario);
     }
 
+    /**
+     * Cambia la contraseña de un usuario validando la contraseña actual
+     */
+    public void changePassword(Integer idUsuario, String contrasenaActual, String nuevaContrasena,
+            String confirmarContrasena) {
+        if (contrasenaActual == null || contrasenaActual.trim().isEmpty()) {
+            throw new IllegalArgumentException("La contraseña actual es requerida");
+        }
+
+        if (nuevaContrasena == null || nuevaContrasena.trim().isEmpty()) {
+            throw new IllegalArgumentException("La nueva contraseña es requerida");
+        }
+
+        if (confirmarContrasena == null || confirmarContrasena.trim().isEmpty()) {
+            throw new IllegalArgumentException("La confirmación de contraseña es requerida");
+        }
+
+        if (!nuevaContrasena.equals(confirmarContrasena)) {
+            throw new IllegalArgumentException("Las contraseñas no coinciden");
+        }
+
+        Usuario usuario = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con id: " + idUsuario));
+
+        if (!bCryptUtils.comparePassword(contrasenaActual, usuario.getContrasena())) {
+            throw new IllegalArgumentException("La contraseña actual es incorrecta");
+        }
+
+        if (bCryptUtils.comparePassword(nuevaContrasena, usuario.getContrasena())) {
+            throw new IllegalArgumentException("La nueva contraseña no puede ser igual a la anterior");
+        }
+
+        validatePassword(nuevaContrasena);
+
+        usuario.setContrasena(bCryptUtils.hashPassword(nuevaContrasena));
+        usuarioRepository.save(usuario);
+    }
+
+    /**
+     * Restablece la contraseña de un usuario sin validar la contraseña actual
+     */
+    public void resetPassword(Integer idUsuario, String nuevaContrasena, String confirmarContrasena) {
+        if (nuevaContrasena == null || nuevaContrasena.trim().isEmpty()) {
+            throw new IllegalArgumentException("La nueva contraseña es requerida");
+        }
+
+        if (confirmarContrasena == null || confirmarContrasena.trim().isEmpty()) {
+            throw new IllegalArgumentException("La confirmación de contraseña es requerida");
+        }
+
+        if (!nuevaContrasena.equals(confirmarContrasena)) {
+            throw new IllegalArgumentException("Las contraseñas no coinciden");
+        }
+
+        Usuario usuario = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con id: " + idUsuario));
+
+        if (bCryptUtils.comparePassword(nuevaContrasena, usuario.getContrasena())) {
+            throw new IllegalArgumentException("La nueva contraseña no puede ser igual a la anterior");
+        }
+
+        validatePassword(nuevaContrasena);
+
+        usuario.setContrasena(bCryptUtils.hashPassword(nuevaContrasena));
+        usuarioRepository.save(usuario);
+    }
+
     // ========== VALIDACIONES PRIVADAS ==========
 
     private void validateEmail(String correo) {

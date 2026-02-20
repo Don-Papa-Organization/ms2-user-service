@@ -2,11 +2,16 @@ package com.users.UsuariosYEmpleados.controller;
 
 import com.users.UsuariosYEmpleados.domain.dto.UserDTO;
 import com.users.UsuariosYEmpleados.domain.dto.TokenDriverDTO;
+import com.users.UsuariosYEmpleados.domain.dto.ClientDTO;
+import com.users.UsuariosYEmpleados.domain.dto.EmpleadoDTO;
 import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 import com.users.UsuariosYEmpleados.service.UserService;
 import com.users.UsuariosYEmpleados.service.TokenService;
+import com.users.UsuariosYEmpleados.service.ClientService;
+import com.users.UsuariosYEmpleados.service.EmpleadoService;
 import com.users.UsuariosYEmpleados.service.apis.EmailService;
 import com.users.UsuariosYEmpleados.util.JwtUtils;
+import com.users.UsuariosYEmpleados.util.ResponseUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,17 +28,23 @@ public class AuthController {
 
     private final UserService userService;
     private final TokenService tokenService;
+    private final ClientService clientService;
+    private final EmpleadoService empleadoService;
     private final EmailService emailService;
     private final JwtUtils jwtUtils;
     private final String nodeEnv;
 
     public AuthController(UserService userService,
             TokenService tokenService,
+            ClientService clientService,
+            EmpleadoService empleadoService,
             EmailService emailService,
             JwtUtils jwtUtils,
             @Value("${spring.profiles.active:development}") String nodeEnv) {
         this.userService = userService;
         this.tokenService = tokenService;
+        this.clientService = clientService;
+        this.empleadoService = empleadoService;
         this.emailService = emailService;
         this.jwtUtils = jwtUtils;
         this.nodeEnv = nodeEnv;
@@ -52,8 +63,7 @@ public class AuthController {
                 try {
                     tipoUsuario = TipoUsuario.valueOf(tipoUsuarioStr.toLowerCase());
                 } catch (IllegalArgumentException e) {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                            .body(Map.of("message", "Tipo de usuario inválido"));
+                    return ResponseUtils.error(HttpStatus.BAD_REQUEST, "Tipo de usuario inválido");
                 }
             }
 
@@ -64,18 +74,17 @@ public class AuthController {
             TokenDriverDTO tokenDTO = tokenService.createToken(usuarioCreado.getIdUsuario(), 1);
             emailService.sendVerificationEmail(correo, tokenDTO.getToken());
 
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of(
-                            "message",
-                            "Usuario registrado correctamente. Revisa tu correo para verificar la cuenta.",
-                            "userId", usuarioCreado.getIdUsuario()));
+                Map<String, Object> data = new HashMap<>();
+                data.put("userId", usuarioCreado.getIdUsuario());
+
+                return ResponseUtils.created(data,
+                    "Usuario registrado correctamente. Revisa tu correo para verificar la cuenta.");
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
         } catch (Exception error) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error interno al registrar usuario"));
+                return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error interno al registrar usuario");
         }
     }
 
@@ -83,20 +92,18 @@ public class AuthController {
     public ResponseEntity<?> verifyEmail(@RequestParam String token) {
         try {
             if (token == null || token.trim().isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "Token de verificación requerido"));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, "Token de verificación requerido");
             }
 
             // Validar token
             if (!tokenService.isValidToken(token)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "Token de verificación inválido o expirado"));
+                return ResponseUtils.error(HttpStatus.NOT_FOUND,
+                    "Token de verificación inválido o expirado");
             }
 
             TokenDriverDTO tokenDTO = tokenService.findByToken(token);
             if (tokenDTO == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "Token de verificación no encontrado"));
+                return ResponseUtils.error(HttpStatus.NOT_FOUND, "Token de verificación no encontrado");
             }
 
             // Activar usuario (validación en UserService)
@@ -107,16 +114,16 @@ public class AuthController {
             // Eliminar token usado
             tokenService.deleteByToken(token);
 
-            return ResponseEntity.ok(Map.of(
-                    "message", "Se verificó el correo " + usuario.getCorreo(),
-                    "email", usuario.getCorreo()));
+                Map<String, Object> data = new HashMap<>();
+                data.put("email", usuario.getCorreo());
+
+                return ResponseUtils.ok(data, "Se verificó el correo " + usuario.getCorreo());
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
         } catch (Exception error) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error interno al verificar email"));
+                return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error interno al verificar email");
         }
     }
 
@@ -154,20 +161,20 @@ public class AuthController {
             refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7 días
             response.addCookie(refreshTokenCookie);
 
-            return ResponseEntity.ok(Map.of(
-                    "message", "Inicio de sesión exitoso",
-                    "user", Map.of(
-                            "id", user.getIdUsuario(),
-                            "correo", user.getCorreo(),
-                            "tipoUsuario", user.getTipoUsuario(),
-                            "activo", user.getActivo())));
+                Map<String, Object> data = new HashMap<>();
+                data.put("user", Map.of(
+                    "id", user.getIdUsuario(),
+                    "correo", user.getCorreo(),
+                    "tipoUsuario", user.getTipoUsuario(),
+                    "activo", user.getActivo()));
+
+                return ResponseUtils.ok(data, "Inicio de sesión exitoso");
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", e.getMessage()));
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED, e.getMessage());
         } catch (Exception error) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error interno al iniciar sesión"));
+                return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error interno al iniciar sesión");
         }
     }
 
@@ -177,8 +184,7 @@ public class AuthController {
         try {
             // Obtener el refreshToken de las cookies
             if (token == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "No se proporcionó refresh token"));
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED, "No se proporcionó refresh token");
             }
 
             // Verificar refreshToken JWT
@@ -190,8 +196,7 @@ public class AuthController {
             UserDTO user = userService.findById(userId);
 
             if (user == null || Boolean.FALSE.equals(user.getActivo())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("message", "Usuario no válido o inactivo"));
+                return ResponseUtils.error(HttpStatus.FORBIDDEN, "Usuario no válido o inactivo");
             }
 
             // Verificar que el token también exista en nuestra base de datos
@@ -218,21 +223,19 @@ public class AuthController {
             response.addCookie(accessTokenCookie);
 
             Map<String, Object> responseBody = new HashMap<>();
-            responseBody.put("message", "Nuevo access token generado");
             responseBody.put("accessToken", newAccessToken);
 
-            return ResponseEntity.ok(responseBody);
+            return ResponseUtils.ok(responseBody, "Nuevo access token generado");
 
         } catch (io.jsonwebtoken.JwtException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Token inválido o expirado: " + e.getMessage()));
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED,
+                    "Token inválido o expirado: " + e.getMessage());
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
         } catch (Exception error) {
             System.err.println("[REFRESH TOKEN ERROR] " + error.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error interno al refrescar token"));
+                return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error interno al refrescar token");
         }
     }
 
@@ -241,8 +244,7 @@ public class AuthController {
         try {
             String correo = (String) requestBody.get("correo");
             if (correo == null || correo.trim().isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "El campo correo es requerido"));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, "El campo correo es requerido");
             }
 
             // Buscar usuario por correo usando UserService
@@ -250,13 +252,12 @@ public class AuthController {
             try {
                 usuario = userService.findByCorreo(correo);
             } catch (RuntimeException e) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "Usuario no encontrado"));
+                return ResponseUtils.error(HttpStatus.NOT_FOUND, "Usuario no encontrado");
             }
 
             if (Boolean.TRUE.equals(usuario.getActivo())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "El usuario ya está verificado"));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST,
+                    "El usuario ya está verificado");
             }
 
             // Eliminar tokens de verificación antiguos del usuario
@@ -268,14 +269,13 @@ public class AuthController {
             // Enviar correo de verificación
             emailService.sendVerificationEmail(correo, TokenDriverDTO.getToken());
 
-            return ResponseEntity.ok(Map.of("message", "Correo de verificación reenviado"));
+            return ResponseUtils.ok(Map.of(), "Correo de verificación reenviado");
 
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
         } catch (Exception error) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al reenviar correo de verificación"));
+                return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al reenviar correo de verificación");
         }
     }
 
@@ -298,12 +298,183 @@ public class AuthController {
             refreshTokenCookie.setMaxAge(0); // Eliminar cookie
             response.addCookie(refreshTokenCookie);
 
-            return ResponseEntity.ok(Map.of("message", "Sesión cerrada exitosamente"));
+            return ResponseUtils.ok(Map.of(), "Sesión cerrada exitosamente");
 
         } catch (Exception error) {
             System.err.println("[LOGOUT ERROR] " + error.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error interno al cerrar sesión"));
+                return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error interno al cerrar sesión");
+        }
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(@CookieValue(value = "accessToken", required = false) String token,
+            @RequestBody Map<String, Object> requestBody) {
+        try {
+            if (token == null) {
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED, "No autenticado");
+            }
+
+            Map<String, Object> payload = jwtUtils.verifyAccessToken(token);
+            Integer userId = (Integer) payload.get("id");
+
+            if (userId == null) {
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED, "ID de usuario no encontrado en token");
+            }
+
+            UserDTO user = userService.findById(userId);
+
+            String nombre = (String) requestBody.get("nombre");
+            String telefono = (String) requestBody.get("telefono");
+            String direccion = (String) requestBody.get("direccion");
+            String documento = (String) requestBody.get("documento");
+            String correo = (String) requestBody.get("correo");
+
+            if (correo != null) {
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST,
+                        "El correo no puede modificarse desde este endpoint");
+            }
+
+            boolean noUpdates = (nombre == null && telefono == null && direccion == null && documento == null);
+            if (noUpdates) {
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, "No se proporcionaron campos para actualizar");
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", user.getIdUsuario());
+            response.put("correo", user.getCorreo());
+            response.put("tipoUsuario", user.getTipoUsuario());
+            response.put("activo", user.getActivo());
+
+            if (user.getTipoUsuario() == TipoUsuario.cliente) {
+                ClientDTO updateDTO = new ClientDTO();
+                updateDTO.setIdUsuario(userId);
+                updateDTO.setNombre(nombre);
+                updateDTO.setTelefono(telefono);
+                updateDTO.setDireccion(direccion);
+
+                ClientDTO updated = clientService.updateForExistingUser(userId, updateDTO);
+
+                Map<String, Object> clienteInfo = new HashMap<>();
+                clienteInfo.put("nombre", updated.getNombre());
+                clienteInfo.put("telefono", updated.getTelefono());
+                clienteInfo.put("direccion", updated.getDireccion());
+                response.put("cliente", clienteInfo);
+
+            } else if (user.getTipoUsuario() == TipoUsuario.empleado) {
+                EmpleadoDTO updateDTO = new EmpleadoDTO();
+                updateDTO.setIdUsuario(userId);
+                updateDTO.setNombre(nombre);
+                updateDTO.setTelefono(telefono);
+                updateDTO.setDocumento(documento);
+
+                EmpleadoDTO updated = empleadoService.updatePersonalInfo(userId, updateDTO);
+
+                Map<String, Object> empleadoInfo = new HashMap<>();
+                empleadoInfo.put("nombre", updated.getNombre());
+                empleadoInfo.put("telefono", updated.getTelefono());
+                empleadoInfo.put("documento", updated.getDocumento());
+                empleadoInfo.put("cargo", updated.getCargo());
+                response.put("empleado", empleadoInfo);
+
+            } else {
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, "Tipo de usuario no soportado");
+            }
+
+            return ResponseUtils.ok(response, "Información personal actualizada correctamente");
+
+        } catch (io.jsonwebtoken.JwtException e) {
+            return ResponseUtils.error(HttpStatus.UNAUTHORIZED, "Token inválido o expirado");
+        } catch (RuntimeException e) {
+            return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception error) {
+            return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error interno al actualizar información personal");
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@CookieValue(value = "accessToken", required = false) String token,
+            @RequestBody Map<String, Object> requestBody) {
+        try {
+            if (token == null) {
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED, "No autenticado");
+            }
+
+            Map<String, Object> payload = jwtUtils.verifyAccessToken(token);
+            Integer userId = (Integer) payload.get("id");
+
+            if (userId == null) {
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED, "ID de usuario no encontrado en token");
+            }
+
+            String contrasenaActual = (String) requestBody.get("contrasenaActual");
+            String nuevaContrasena = (String) requestBody.get("nuevaContrasena");
+            String confirmarContrasena = (String) requestBody.get("confirmarContrasena");
+
+            userService.changePassword(userId, contrasenaActual, nuevaContrasena, confirmarContrasena);
+
+            return ResponseUtils.ok(Map.of(), "Contraseña actualizada correctamente");
+
+        } catch (io.jsonwebtoken.JwtException e) {
+            return ResponseUtils.error(HttpStatus.UNAUTHORIZED, "Token inválido o expirado");
+        } catch (RuntimeException e) {
+            return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception error) {
+            return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error interno al cambiar contraseña");
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, Object> requestBody) {
+        try {
+            String correo = (String) requestBody.get("correo");
+            if (correo == null || correo.trim().isEmpty()) {
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, "El correo es requerido");
+            }
+
+            UserDTO usuario = userService.findByCorreo(correo);
+            TokenDriverDTO tokenDTO = tokenService.createToken(usuario.getIdUsuario(), 1);
+            emailService.sendPasswordResetEmail(correo, tokenDTO.getToken());
+
+            return ResponseUtils.ok(Map.of(), "Se envió el correo para restablecer la contraseña");
+
+        } catch (RuntimeException e) {
+            return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception error) {
+            return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al enviar correo de recuperación");
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, Object> requestBody) {
+        try {
+            String token = (String) requestBody.get("token");
+            String nuevaContrasena = (String) requestBody.get("nuevaContrasena");
+            String confirmarContrasena = (String) requestBody.get("confirmarContrasena");
+
+            if (token == null || token.trim().isEmpty()) {
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, "Token de recuperación requerido");
+            }
+
+            if (!tokenService.isValidToken(token)) {
+                return ResponseUtils.error(HttpStatus.NOT_FOUND, "Token inválido o expirado");
+            }
+
+            TokenDriverDTO tokenDTO = tokenService.findByToken(token);
+            userService.resetPassword(tokenDTO.getIdUsuario(), nuevaContrasena, confirmarContrasena);
+
+            tokenService.deleteByToken(token);
+
+            return ResponseUtils.ok(Map.of(), "Contraseña restablecida correctamente");
+
+        } catch (RuntimeException e) {
+            return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception error) {
+            return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al restablecer contraseña");
         }
     }
 
@@ -311,8 +482,7 @@ public class AuthController {
     public ResponseEntity<?> getProfile(@CookieValue(value = "accessToken", required = false) String token) {
         try {
             if (token == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "No autenticado"));
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED, "No autenticado");
             }
 
             // Verificar token JWT
@@ -327,8 +497,7 @@ public class AuthController {
             UserDTO user = userService.findById(userId);
 
             if (user == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "Usuario no encontrado"));
+                return ResponseUtils.error(HttpStatus.NOT_FOUND, "Usuario no encontrado");
             }
 
             // Crear respuesta sin información sensible
@@ -338,17 +507,16 @@ public class AuthController {
             response.put("tipoUsuario", user.getTipoUsuario());
             response.put("activo", user.getActivo());
 
-            return ResponseEntity.ok(response);
+            return ResponseUtils.ok(response, "Perfil obtenido correctamente");
 
         } catch (io.jsonwebtoken.JwtException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Token inválido o expirado: " + e.getMessage()));
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED,
+                    "Token inválido o expirado: " + e.getMessage());
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
         } catch (Exception error) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error interno al obtener perfil"));
+                return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error interno al obtener perfil");
         }
     }
 
@@ -356,10 +524,9 @@ public class AuthController {
     public ResponseEntity<?> checkEmail(@PathVariable String email) {
         try {
             boolean exists = userService.existsByCorreo(email);
-            return ResponseEntity.ok(Map.of("exists", exists));
+            return ResponseUtils.ok(Map.of("exists", exists), "Verificación completada");
         } catch (Exception error) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al verificar email"));
+            return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error al verificar email");
         }
     }
 }

@@ -19,7 +19,19 @@ public class SecurityConfig {
                                                 org.springframework.security.config.http.SessionCreationPolicy.STATELESS)) // Sin sesiones
                                 .authorizeHttpRequests(auth -> auth
                                                 // Rutas públicas
-                                                .requestMatchers("/api/auth/**").permitAll() // Login/registro/logout sin autenticación
+                                                .requestMatchers("/api/auth/register").permitAll()
+                                                .requestMatchers("/api/auth/login").permitAll()
+                                                .requestMatchers("/api/auth/verify-email").permitAll()
+                                                .requestMatchers("/api/auth/refresh-token").permitAll()
+                                                .requestMatchers("/api/auth/resend-verification").permitAll()
+                                                .requestMatchers("/api/auth/check-email/**").permitAll()
+                                                .requestMatchers("/api/auth/forgot-password").permitAll()
+                                                .requestMatchers("/api/auth/reset-password").permitAll()
+
+                                                // Rutas autenticadas de auth
+                                                .requestMatchers("/api/auth/profile").authenticated()
+                                                .requestMatchers("/api/auth/change-password").authenticated()
+                                                .requestMatchers("/api/auth/logout").authenticated()
 
                                                 // Rutas específicas de clientes - autenticado (cualquier rol)
                                                 .requestMatchers(HttpMethod.GET, "/api/clientes/{id}").authenticated() // GET clientes/{id} - cualquier usuario autenticado

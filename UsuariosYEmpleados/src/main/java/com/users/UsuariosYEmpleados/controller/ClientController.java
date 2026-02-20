@@ -1,9 +1,10 @@
 package com.users.UsuariosYEmpleados.controller;
 
 import com.users.UsuariosYEmpleados.domain.dto.ClientDTO;
-import com.users.UsuariosYEmpleados.domain.dto.ClientEnrichedDTO;
 import com.users.UsuariosYEmpleados.service.ClientService;
 import com.users.UsuariosYEmpleados.util.JwtUtils;
+import com.users.UsuariosYEmpleados.util.ResponseUtils;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -31,8 +32,8 @@ public class ClientController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ClientDTO>> getAll() {
-        return ResponseEntity.ok(clientService.findAll());
+    public ResponseEntity<?> getAll() {
+        return ResponseUtils.ok(clientService.findAll(), "Clientes obtenidos correctamente");
     }
 
     // Rutas específicas (literales) ANTES que rutas genéricas (PathVariable)
@@ -40,25 +41,25 @@ public class ClientController {
     public ResponseEntity<?> getByNombre(@RequestParam String nombre) {
         try {
             List<ClientDTO> clientes = clientService.findByNombre(nombre);
-            return ResponseEntity.ok(clientes);
+            return ResponseUtils.ok(clientes, "Clientes obtenidos correctamente");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+            return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
 
     @GetMapping("/enriquecido")
-    public ResponseEntity<List<ClientEnrichedDTO>> getAllEnriched() {
-        return ResponseEntity.ok(clientService.findAllEnriched());
+    public ResponseEntity<?> getAllEnriched() {
+        return ResponseUtils.ok(clientService.findAllEnriched(),
+                "Clientes enriquecidos obtenidos correctamente");
     }
 
     @GetMapping("/enriquecido/{id}")
     public ResponseEntity<?> getByIdEnriched(@PathVariable Integer id) {
         try {
-            return ResponseEntity.ok(clientService.findByIdEnriched(id));
+            return ResponseUtils.ok(clientService.findByIdEnriched(id),
+                    "Cliente enriquecido obtenido correctamente");
         } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", ex.getMessage()));
+            return ResponseUtils.error(HttpStatus.NOT_FOUND, ex.getMessage());
         }
     }
 
@@ -66,10 +67,9 @@ public class ClientController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getById(@PathVariable Integer id) {
         try {
-            return ResponseEntity.ok(clientService.findById(id));
+            return ResponseUtils.ok(clientService.findById(id), "Cliente obtenido correctamente");
         } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", ex.getMessage()));
+            return ResponseUtils.error(HttpStatus.NOT_FOUND, ex.getMessage());
         }
     }
 
@@ -78,13 +78,11 @@ public class ClientController {
                                            @RequestBody ClientDTO body) {
         try {
             ClientDTO created = clientService.createForExistingUser(idUsuario, body);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+            return ResponseUtils.created(created, "Cliente creado correctamente");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+            return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
         } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al crear cliente"));
+            return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error al crear cliente");
         }
     }
 
@@ -93,29 +91,25 @@ public class ClientController {
                                           @RequestBody ClientDTO body) {
         try {
             if (token == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "No autenticado"));
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED, "No autenticado");
             }
             
             Map<String, Object> payload = jwtUtils.verifyAccessToken(token);
             Integer idUsuario = (Integer) payload.get("id");
 
             if (idUsuario == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "ID de usuario no encontrado en token"));
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED,
+                        "ID de usuario no encontrado en token");
             }
             
             ClientDTO created = clientService.createForExistingUser(idUsuario, body);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+            return ResponseUtils.created(created, "Cliente creado correctamente");
         } catch (io.jsonwebtoken.JwtException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Token inválido o expirado"));
+            return ResponseUtils.error(HttpStatus.UNAUTHORIZED, "Token inválido o expirado");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+            return ResponseUtils.error(HttpStatus.BAD_REQUEST, e.getMessage());
         } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al crear cliente"));
+            return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error al crear cliente");
         }
     }
 }

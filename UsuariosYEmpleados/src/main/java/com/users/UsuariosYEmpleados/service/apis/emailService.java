@@ -56,4 +56,34 @@ public class EmailService {
             throw new RuntimeException(error);
         }
     }
+
+    public Object sendPasswordResetEmail(String email, String token) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            String requestBody = String.format(
+                "{\"email\":\"%s\",\"token\":\"%s\"}",
+                email,
+                token
+            );
+
+            HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
+
+            String url = emailServiceUrl + "/sendMail/recuperar-contrasena";
+
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                url,
+                request,
+                String.class
+            );
+
+            return response.getBody();
+
+        } catch (Exception error) {
+            System.out.println("[sendPasswordResetEmail] error: " +
+                (error.getMessage() != null ? error.getMessage() : error));
+            throw new RuntimeException(error);
+        }
+    }
 }

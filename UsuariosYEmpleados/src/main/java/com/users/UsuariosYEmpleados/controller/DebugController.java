@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.GrantedAuthority;
+import com.users.UsuariosYEmpleados.util.ResponseUtils;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -21,20 +22,19 @@ public class DebugController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
         if (auth == null || !auth.isAuthenticated()) {
-            return ResponseEntity.ok(Map.of(
-                "authenticated", false,
-                "message", "No autenticado"
-            ));
+            return ResponseUtils.ok(Map.of(
+                "authenticated", false
+            ), "No autenticado");
         }
         
-        return ResponseEntity.ok(Map.of(
+        return ResponseUtils.ok(Map.of(
             "authenticated", true,
             "principal", auth.getPrincipal(),
             "authorities", auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList()),
             "details", auth.getDetails()
-        ));
+        ), "Contexto de seguridad obtenido");
     }
     
     @GetMapping("/check-role/{role}")
@@ -44,13 +44,13 @@ public class DebugController {
         boolean hasRole = auth != null && auth.getAuthorities().stream()
             .anyMatch(a -> a.getAuthority().equals("ROLE_" + role.toUpperCase()));
         
-        return ResponseEntity.ok(Map.of(
+        return ResponseUtils.ok(Map.of(
             "role", role,
             "hasRole", hasRole,
             "authorities", auth != null ? 
                 auth.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
                     .collect(Collectors.toList()) : "null"
-        ));
+        ), "Verificación de rol completada");
     }
 }

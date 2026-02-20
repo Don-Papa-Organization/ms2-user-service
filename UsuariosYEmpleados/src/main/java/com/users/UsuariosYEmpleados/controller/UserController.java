@@ -4,6 +4,7 @@ import com.users.UsuariosYEmpleados.domain.dto.UserResponseDTO;
 import com.users.UsuariosYEmpleados.domain.dto.UserDTO;
 import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 import com.users.UsuariosYEmpleados.service.UserService;
+import com.users.UsuariosYEmpleados.util.ResponseUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -55,14 +55,14 @@ public class UserController {
                             u.getActivo()))
                     .collect(Collectors.toList());
 
-            return ResponseEntity.ok(response);
+            return ResponseUtils.ok(response, "Usuarios obtenidos correctamente");
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", "Tipo de usuario inválido: " + tipoUsuario));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST,
+                    "Tipo de usuario inválido: " + tipoUsuario);
         } catch (Exception error) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al obtener usuarios"));
+                return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener usuarios");
         }
     }
 
@@ -75,13 +75,11 @@ public class UserController {
                     usuario.getCorreo(),
                     usuario.getTipoUsuario(),
                     usuario.getActivo());
-            return ResponseEntity.ok(response);
+            return ResponseUtils.ok(response, "Usuario obtenido correctamente");
         } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", ex.getMessage()));
+            return ResponseUtils.error(HttpStatus.NOT_FOUND, ex.getMessage());
         } catch (Exception error) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al obtener usuario"));
+            return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error al obtener usuario");
         }
     }
 
@@ -94,13 +92,12 @@ public class UserController {
                     usuario.getCorreo(),
                     usuario.getTipoUsuario(),
                     usuario.getActivo());
-            return ResponseEntity.ok(response);
+            return ResponseUtils.ok(response, "Usuario obtenido correctamente");
         } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", ex.getMessage()));
+            return ResponseUtils.error(HttpStatus.NOT_FOUND, ex.getMessage());
         } catch (Exception error) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al obtener usuario por correo"));
+            return ResponseUtils.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener usuario por correo");
         }
     }
 }

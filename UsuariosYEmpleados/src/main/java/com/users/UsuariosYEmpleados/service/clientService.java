@@ -102,6 +102,43 @@ public class ClientService {
         return convertToDTO(saved);
     }
 
+    public ClientDTO updateForExistingUser(Integer idUsuario, ClientDTO clientData) {
+        if (clientData == null) {
+            throw new IllegalArgumentException("Los datos del cliente son requeridos");
+        }
+
+        Cliente existingCliente = clienteRepository.findById(idUsuario)
+                .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado con id: " + idUsuario));
+
+        if (clientData.getDireccion() != null) {
+            if (clientData.getDireccion().trim().isEmpty()) {
+                throw new IllegalArgumentException("La dirección no puede estar vacía");
+            }
+            existingCliente.setDireccion(clientData.getDireccion());
+        }
+
+        if (clientData.getNombre() != null) {
+            if (clientData.getNombre().trim().isEmpty()) {
+                throw new IllegalArgumentException("El nombre no puede estar vacío");
+            }
+            existingCliente.setNombre(clientData.getNombre());
+        }
+
+        if (clientData.getTelefono() != null) {
+            if (clientData.getTelefono().trim().isEmpty()) {
+                throw new IllegalArgumentException("El teléfono no puede estar vacío");
+            }
+            if (!clientData.getTelefono().equals(existingCliente.getTelefono())
+                    && clienteRepository.existsByTelefono(clientData.getTelefono())) {
+                throw new IllegalArgumentException("El teléfono ya está registrado para otro cliente");
+            }
+            existingCliente.setTelefono(clientData.getTelefono());
+        }
+
+        Cliente updated = clienteRepository.save(existingCliente);
+        return convertToDTO(updated);
+    }
+
     // ========== VALIDACIONES PRIVADAS ==========
 
     private void validateClientData(ClientDTO clientData) {

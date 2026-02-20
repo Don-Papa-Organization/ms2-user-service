@@ -145,6 +145,47 @@ public class EmpleadoService {
         return convertToDTO(updatedEmpleado);
     }
 
+    public EmpleadoDTO updatePersonalInfo(Integer idUsuario, EmpleadoDTO empleadoDTO) {
+        if (empleadoDTO == null) {
+            throw new IllegalArgumentException("Los datos del empleado son requeridos");
+        }
+
+        Empleado existingEmpleado = empleadoRepository.findById(idUsuario)
+                .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado con id: " + idUsuario));
+
+        if (empleadoDTO.getNombre() != null) {
+            if (empleadoDTO.getNombre().trim().isEmpty()) {
+                throw new IllegalArgumentException("El nombre no puede estar vacío");
+            }
+            existingEmpleado.setNombre(empleadoDTO.getNombre());
+        }
+
+        if (empleadoDTO.getTelefono() != null) {
+            if (empleadoDTO.getTelefono().trim().isEmpty()) {
+                throw new IllegalArgumentException("El teléfono no puede estar vacío");
+            }
+            if (!empleadoDTO.getTelefono().equals(existingEmpleado.getTelefono())
+                    && empleadoRepository.findByTelefono(empleadoDTO.getTelefono()).isPresent()) {
+                throw new IllegalArgumentException("El teléfono ya está en uso por otro empleado");
+            }
+            existingEmpleado.setTelefono(empleadoDTO.getTelefono());
+        }
+
+        if (empleadoDTO.getDocumento() != null) {
+            if (empleadoDTO.getDocumento().trim().isEmpty()) {
+                throw new IllegalArgumentException("El documento no puede estar vacío");
+            }
+            if (!empleadoDTO.getDocumento().equals(existingEmpleado.getDocumento())
+                    && empleadoRepository.existsByDocumento(empleadoDTO.getDocumento())) {
+                throw new IllegalArgumentException("El documento ya está en uso por otro empleado");
+            }
+            existingEmpleado.setDocumento(empleadoDTO.getDocumento());
+        }
+
+        Empleado updatedEmpleado = empleadoRepository.save(existingEmpleado);
+        return convertToDTO(updatedEmpleado);
+    }
+
     public void delete(Integer id) {
         Empleado empleado = requireEmpleado(id);
         empleadoRepository.delete(empleado);

@@ -19,7 +19,7 @@ public class UserService {
     private static final Pattern EMAIL_REGEX = Pattern
             .compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     private static final Pattern PASSWORD_REGEX = Pattern
-            .compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[A-Za-z\\d@$!%*?&]{8,}$");
+            .compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[A-Za-z\\d@$!%*?&.]{8,}$");
 
     private final UsuarioRepository usuarioRepository;
     private final BCryptUtils bCryptUtils;

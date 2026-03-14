@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -222,6 +223,18 @@ public class UserService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
+
+        public List<UserDTO> search(TipoUsuario tipoUsuario, Boolean activo, String correo) {
+        String correoFiltro = Optional.ofNullable(correo)
+            .map(String::trim)
+            .filter(value -> !value.isEmpty())
+            .orElse(null);
+
+        return usuarioRepository.search(tipoUsuario, activo, correoFiltro)
+            .stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+        }
 
     public UserDTO create(UserDTO userDTO) {
         // Validar que no exista duplicado

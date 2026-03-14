@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,10 +29,7 @@ public class EmpleadoService {
     // ========== Métodos de Búsqueda ==========
 
     public List<EmpleadoDTO> findAll() {
-        return empleadoRepository.findAll()
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return convertToDTOList(empleadoRepository.findAll());
     }
 
     public EmpleadoDTO findById(Integer id) {
@@ -56,17 +55,20 @@ public class EmpleadoService {
     }
 
     public List<EmpleadoDTO> findByCargo(String cargo) {
-        return empleadoRepository.findByCargo(cargo)
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return convertToDTOList(empleadoRepository.findByCargo(cargo));
     }
 
     public List<EmpleadoDTO> findByNombre(String nombre) {
-        return empleadoRepository.findByNombreContainingIgnoreCase(nombre)
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return convertToDTOList(empleadoRepository.findByNombreContainingIgnoreCase(nombre));
+    }
+
+    public List<EmpleadoDTO> search(String searchTerm, Boolean activo) {
+        String normalizedSearchTerm = Optional.ofNullable(searchTerm)
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .orElse(null);
+
+        return convertToDTOList(empleadoRepository.search(normalizedSearchTerm, activo));
     }
 
     // ========== Métodos de Verificación ==========
@@ -229,10 +231,14 @@ public class EmpleadoService {
     // ========== Métodos de Conversión ==========
 
     private EmpleadoDTO convertToDTO(Empleado empleado) {
-        // Obtener datos del usuario asociado
         Usuario usuario = usuarioRepository.findById(empleado.getIdUsuario())
-                .orElse(null);
-        
+            .orElse(null);
+
+        return convertToDTO(empleado, usuario);
+        }
+
+        private EmpleadoDTO convertToDTO(Empleado empleado, Usuario usuario) {
+        // Obtener datos del usuario asociado
         String correo = usuario != null ? usuario.getCorreo() : null;
         Boolean activo = usuario != null ? usuario.getActivo() : null;
         
@@ -245,6 +251,16 @@ public class EmpleadoService {
             correo,
             activo
         );
+    }
+
+    private List<EmpleadoDTO> convertToDTOList(List<Empleado> empleados) {
+        Map<Integer, Usuario> usuariosById = usuarioRepository.findAllById(
+                empleados.stream().map(Empleado::getIdUsuario).collect(Collectors.toList())
+        ).stream().collect(Collectors.toMap(Usuario::getIdUsuario, usuario -> usuario));
+
+        return empleados.stream()
+                .map(empleado -> convertToDTO(empleado, usuariosById.get(empleado.getIdUsuario())))
+                .collect(Collectors.toList());
     }
 
     private Empleado requireEmpleado(Integer id) {

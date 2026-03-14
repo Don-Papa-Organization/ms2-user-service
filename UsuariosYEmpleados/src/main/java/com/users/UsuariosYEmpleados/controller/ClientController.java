@@ -32,8 +32,10 @@ public class ClientController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAll() {
-        return ResponseUtils.ok(clientService.findAll(), "Clientes obtenidos correctamente");
+    public ResponseEntity<?> getAll(
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = false) Boolean activo) {
+        return ResponseUtils.ok(clientService.search(nombre, activo), "Clientes obtenidos correctamente");
     }
 
     // Rutas específicas (literales) ANTES que rutas genéricas (PathVariable)
@@ -48,8 +50,10 @@ public class ClientController {
     }
 
     @GetMapping("/enriquecido")
-    public ResponseEntity<?> getAllEnriched() {
-        return ResponseUtils.ok(clientService.findAllEnriched(),
+    public ResponseEntity<?> getAllEnriched(
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = false) Boolean activo) {
+        return ResponseUtils.ok(clientService.searchEnriched(nombre, activo),
                 "Clientes enriquecidos obtenidos correctamente");
     }
 

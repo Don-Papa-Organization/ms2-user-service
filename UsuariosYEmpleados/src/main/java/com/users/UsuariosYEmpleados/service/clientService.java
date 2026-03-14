@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,10 +30,7 @@ public class ClientService {
     }
     
     public List<ClientDTO> findAll() {
-        return clienteRepository.findAll()
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return convertToDTOList(clienteRepository.findAll());
     }
     
     public ClientDTO findById(Integer id) {
@@ -50,17 +49,29 @@ public class ClientService {
         if (nombre == null || nombre.trim().isEmpty()) {
             throw new IllegalArgumentException("El nombre es requerido para la búsqueda");
         }
-        return clienteRepository.findByNombreContainingIgnoreCase(nombre)
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return convertToDTOList(clienteRepository.findByNombreContainingIgnoreCase(nombre));
     }
 
     public List<ClientEnrichedDTO> findAllEnriched() {
-        return clienteRepository.findAll()
-                .stream()
-                .map(this::convertToEnrichedDTO)
-                .collect(Collectors.toList());
+        return convertToEnrichedDTOList(clienteRepository.findAll());
+    }
+
+    public List<ClientDTO> search(String searchTerm, Boolean activo) {
+        String normalizedSearchTerm = Optional.ofNullable(searchTerm)
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .orElse(null);
+
+        return convertToDTOList(clienteRepository.search(normalizedSearchTerm, activo));
+    }
+
+    public List<ClientEnrichedDTO> searchEnriched(String searchTerm, Boolean activo) {
+        String normalizedSearchTerm = Optional.ofNullable(searchTerm)
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .orElse(null);
+
+        return convertToEnrichedDTOList(clienteRepository.search(normalizedSearchTerm, activo));
     }
 
     public ClientEnrichedDTO findByIdEnriched(Integer id) {
@@ -173,9 +184,13 @@ public class ClientService {
     }
     
     private ClientDTO convertToDTO(Cliente cliente) {
-        // Obtener datos del usuario asociado
         Usuario usuario = usuarioRepository.findById(cliente.getIdUsuario())
                 .orElse(null);
+
+        return convertToDTO(cliente, usuario);
+        }
+
+        private ClientDTO convertToDTO(Cliente cliente, Usuario usuario) {
         
         String correo = usuario != null ? usuario.getCorreo() : null;
         Boolean activo = usuario != null ? usuario.getActivo() : null;
@@ -192,7 +207,11 @@ public class ClientService {
 
     private ClientEnrichedDTO convertToEnrichedDTO(Cliente cliente) {
         Usuario usuario = usuarioRepository.findById(cliente.getIdUsuario())
-                .orElse(null);
+            .orElse(null);
+        return convertToEnrichedDTO(cliente, usuario);
+        }
+
+        private ClientEnrichedDTO convertToEnrichedDTO(Cliente cliente, Usuario usuario) {
         
         String correo = usuario != null ? usuario.getCorreo() : null;
         TipoUsuario tipoUsuario = usuario != null ? usuario.getTipoUsuario() : null;
@@ -208,4 +227,24 @@ public class ClientService {
             activo
         );
     }
+
+            private List<ClientDTO> convertToDTOList(List<Cliente> clientes) {
+            Map<Integer, Usuario> usuariosById = usuarioRepository.findAllById(
+                clientes.stream().map(Cliente::getIdUsuario).collect(Collectors.toList())
+            ).stream().collect(Collectors.toMap(Usuario::getIdUsuario, usuario -> usuario));
+
+            return clientes.stream()
+                .map(cliente -> convertToDTO(cliente, usuariosById.get(cliente.getIdUsuario())))
+                .collect(Collectors.toList());
+            }
+
+            private List<ClientEnrichedDTO> convertToEnrichedDTOList(List<Cliente> clientes) {
+            Map<Integer, Usuario> usuariosById = usuarioRepository.findAllById(
+                clientes.stream().map(Cliente::getIdUsuario).collect(Collectors.toList())
+            ).stream().collect(Collectors.toMap(Usuario::getIdUsuario, usuario -> usuario));
+
+            return clientes.stream()
+                .map(cliente -> convertToEnrichedDTO(cliente, usuariosById.get(cliente.getIdUsuario())))
+                .collect(Collectors.toList());
+            }
 }

@@ -29,23 +29,11 @@ public class UserController {
     @GetMapping
     public ResponseEntity<?> getAll(
             @RequestParam(required = false) String tipoUsuario,
-            @RequestParam(required = false) Boolean activo) {
+            @RequestParam(required = false) Boolean activo,
+            @RequestParam(required = false) String correo) {
         try {
-            List<UserDTO> usuarios;
-
-            if (tipoUsuario != null && activo != null) {
-                TipoUsuario tipo = TipoUsuario.fromString(tipoUsuario);
-                usuarios = userService.findByTipoUsuario(tipo).stream()
-                        .filter(u -> u.getActivo().equals(activo))
-                        .collect(Collectors.toList());
-            } else if (tipoUsuario != null) {
-                TipoUsuario tipo = TipoUsuario.fromString(tipoUsuario);
-                usuarios = userService.findByTipoUsuario(tipo);
-            } else if (activo != null) {
-                usuarios = userService.findByActivo(activo);
-            } else {
-                usuarios = userService.findAll();
-            }
+            TipoUsuario tipo = tipoUsuario != null ? TipoUsuario.fromString(tipoUsuario) : null;
+            List<UserDTO> usuarios = userService.search(tipo, activo, correo);
 
             List<UserResponseDTO> response = usuarios.stream()
                     .map(u -> new UserResponseDTO(

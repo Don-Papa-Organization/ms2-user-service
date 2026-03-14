@@ -42,32 +42,13 @@ public class EmpleadoController {
             @RequestParam(required = false) String estado) {
 
         try {
-            // Obtener todos los empleados usando el servicio
-            List<EmpleadoDTO> empleados = empleadoService.findAll();
+            if (tipoUsuario != null && !"empleado".equalsIgnoreCase(tipoUsuario.trim())) {
+                return ResponseUtils.ok(List.of(), "No hay empleados para el tipo de usuario solicitado");
+            }
 
-            // Normalizar filtros
-            String nombreFiltro = (nombre != null && !nombre.trim().isEmpty()) ? nombre.toLowerCase() : null;
             final Boolean estadoFiltro = estado != null ? "true".equalsIgnoreCase(estado.trim()) : null;
 
-            // Aplicar filtros
-            List<Map<String, Object>> resultado = empleados.stream()
-                    .filter(emp -> {
-                        // Filtro por nombre
-                        if (nombreFiltro != null &&
-                                emp.getNombre() != null &&
-                                !emp.getNombre().toLowerCase().contains(nombreFiltro)) {
-                            return false;
-                        }
-
-                        // Filtro por estado
-                        if (estadoFiltro != null) {
-                            if (emp.getActivo() == null || emp.getActivo() != estadoFiltro) {
-                                return false;
-                            }
-                        }
-
-                        return true;
-                    })
+            List<Map<String, Object>> resultado = empleadoService.search(nombre, estadoFiltro).stream()
                     .map(emp -> {
                         Map<String, Object> item = new HashMap<>();
 
@@ -81,10 +62,6 @@ public class EmpleadoController {
                         // Información del usuario (si está disponible)
                         item.put("correo", emp.getCorreo());
                         item.put("activo", emp.getActivo());
-                        // TipoUsuario no está en EmpleadoDTO actualmente, necesitaríamos agregarlo
-                        // usuarioInfo.put("tipoUsuario", TipoUsuario.empleado); // Asumimos que es
-                        // empleado
-
                         return item;
                     })
                     .collect(Collectors.toList());

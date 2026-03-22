@@ -359,6 +359,7 @@ public class AuthController {
                 clienteInfo.put("nombre", updated.getNombre());
                 clienteInfo.put("telefono", updated.getTelefono());
                 clienteInfo.put("direccion", updated.getDireccion());
+                clienteInfo.put("documento", null); // Campo no existe en tabla cliente
                 response.put("cliente", clienteInfo);
 
             } else if (user.getTipoUsuario() == TipoUsuario.empleado) {
@@ -506,6 +507,32 @@ public class AuthController {
             response.put("correo", user.getCorreo());
             response.put("tipoUsuario", user.getTipoUsuario());
             response.put("activo", user.getActivo());
+
+            // Incluir datos específicos según tipo de usuario
+            if (user.getTipoUsuario() == TipoUsuario.cliente) {
+                try {
+                    ClientDTO cliente = clientService.findById(userId);
+                    Map<String, Object> clienteInfo = new HashMap<>();
+                    clienteInfo.put("nombre", cliente.getNombre());
+                    clienteInfo.put("telefono", cliente.getTelefono());
+                    clienteInfo.put("direccion", cliente.getDireccion());
+                    response.put("cliente", clienteInfo);
+                } catch (Exception e) {
+                    // Cliente no existe aún, no agregar info
+                }
+            } else if (user.getTipoUsuario() == TipoUsuario.empleado) {
+                try {
+                    EmpleadoDTO empleado = empleadoService.findByUsuarioId(userId);
+                    Map<String, Object> empleadoInfo = new HashMap<>();
+                    empleadoInfo.put("nombre", empleado.getNombre());
+                    empleadoInfo.put("telefono", empleado.getTelefono());
+                    empleadoInfo.put("documento", empleado.getDocumento());
+                    empleadoInfo.put("cargo", empleado.getCargo());
+                    response.put("empleado", empleadoInfo);
+                } catch (Exception e) {
+                    // Empleado no existe aún, no agregar info
+                }
+            }
 
             return ResponseUtils.ok(response, "Perfil obtenido correctamente");
 

@@ -50,10 +50,14 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/empleados/cargo/**").hasRole("ADMINISTRADOR") // GET by cargo
                                                 .requestMatchers("/api/empleados/buscar").hasRole("ADMINISTRADOR") // GET buscar
                                                 .requestMatchers("/api/empleados/verificar-documento/**").hasRole("ADMINISTRADOR") // GET verificar
+                                                
+                                                // Rutas de gestión de usuarios y clientes - solo administrador
+                                                .requestMatchers("/api/usuarios/**").hasRole("ADMINISTRADOR")
+                                                .requestMatchers("/api/clientes/**").hasRole("ADMINISTRADOR")
 
                                                 // Ruta que permite administrador y empleado consultar su propio documento
                                                 .requestMatchers("/api/empleados/documento/**").hasAnyRole("ADMINISTRADOR", "EMPLEADO")
-
+                                                
                                                 // Cualquier otra ruta requiere autenticación (sin rol específico)
                                                 .anyRequest().authenticated()
                                 )

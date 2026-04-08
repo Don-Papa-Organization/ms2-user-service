@@ -2,11 +2,12 @@ spring:
   application:
     name: UsuariosYEmpleados
 
-  # ========== DATASOURCE (MySQL - local o Docker) ==========
+  # ========== DATASOURCE (MySQL) ==========
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:usuarios}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:don_papa}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:password}
+    password: ${DB_PASSWORD:MiContraseñaSegura123!}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}
@@ -23,9 +24,12 @@ spring:
     properties:
       hibernate:
         dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.MySQL8Dialect}
-        format_sql: ${HIBERNATE_FORMAT_SQL:true}
-        hbm2ddl:
-          auto: ${HIBERNATE_HBM2DDL_AUTO:update}
+        jdbc:
+          batch_size: 20
+
+  # ========== SERVER ==========
+  server:
+    port: ${PORT:8080}  # ¡IMPORTANTE! Render/Azure usan PORT
 
   # ========== ACTUATOR ==========
   management:

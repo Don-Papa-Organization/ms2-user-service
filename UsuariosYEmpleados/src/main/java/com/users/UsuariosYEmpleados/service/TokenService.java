@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.Comparator;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -54,21 +55,29 @@ public class TokenService {
     }
     
     public Optional<TokenDriverDTO> findByUsuarioAndToken(Integer idUsuario, String token) {
-        return tokenRepository.findByIdUsuarioAndToken(idUsuario, token)
-                .map(this::convertToDTO);
+        return tokenRepository.findAllByIdUsuarioAndToken(idUsuario, token)
+            .stream()
+            .max(Comparator.comparing(ManejadorTokens::getIdManejadorTokens))
+            .map(this::convertToDTO);
     }
     
     // ========== Métodos CRUD ==========
     
     public TokenDriverDTO createToken(Integer idUsuario, int diasExpiracion) {
+        return createToken(idUsuario, diasExpiracion, generateToken());
+    }
+
+    public TokenDriverDTO createToken(Integer idUsuario, int diasExpiracion, String tokenValue) {
         // Verificar que el usuario existe
         if (!usuarioRepository.existsById(idUsuario)) {
             throw new RuntimeException("Usuario no encontrado con id: " + idUsuario);
         }
+
+        // Evitar duplicados exactos (mismo token para mismo usuario)
+        tokenRepository.deleteByIdUsuarioAndToken(idUsuario, tokenValue);
         
         // Crear nuevo token
         ManejadorTokens token = new ManejadorTokens();
-        String tokenValue = generateToken();
         token.setToken(tokenValue);
         token.setCreadoEn(new Date());
         
@@ -101,7 +110,7 @@ public class TokenService {
     }
     
     public void deleteByToken(String token) {
-        tokenRepository.delete(requireTokenByValue(token));
+        tokenRepository.deleteByToken(token);
     }
     
     public void deleteByUsuario(Integer idUsuario) {
@@ -125,7 +134,10 @@ public class TokenService {
     // ========== Métodos de Validación ==========
     
     public boolean isValidToken(String token) {
-        Optional<ManejadorTokens> tokenOpt = tokenRepository.findByToken(token);
+        Optional<ManejadorTokens> tokenOpt = tokenRepository.findAllByToken(token)
+                .stream()
+                .max(Comparator.comparing(ManejadorTokens::getIdManejadorTokens));
+
         if (tokenOpt.isEmpty()) {
             return false;
         }
@@ -139,7 +151,9 @@ public class TokenService {
     
     public boolean isValidTokenForUsuario(String token, Integer idUsuario) {
         Optional<ManejadorTokens> tokenOpt = tokenRepository
-                .findByIdUsuarioAndToken(idUsuario, token);
+            .findAllByIdUsuarioAndToken(idUsuario, token)
+            .stream()
+            .max(Comparator.comparing(ManejadorTokens::getIdManejadorTokens));
         
         if (tokenOpt.isEmpty()) {
             return false;
@@ -230,7 +244,9 @@ public class TokenService {
     }
     
     private ManejadorTokens requireTokenByValue(String tokenValue) {
-        return tokenRepository.findByToken(tokenValue)
+        return tokenRepository.findAllByToken(tokenValue)
+            .stream()
+            .max(Comparator.comparing(ManejadorTokens::getIdManejadorTokens))
                 .orElseThrow(() -> new RuntimeException("Token no encontrado"));
     }
 }

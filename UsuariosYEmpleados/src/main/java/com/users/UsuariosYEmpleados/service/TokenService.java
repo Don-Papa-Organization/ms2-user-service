@@ -4,7 +4,7 @@ import com.users.UsuariosYEmpleados.domain.entity.ManejadorTokens;
 import com.users.UsuariosYEmpleados.domain.entity.Usuario;
 import com.users.UsuariosYEmpleados.domain.repositories.ManejadorTokensRepository;
 import com.users.UsuariosYEmpleados.domain.repositories.UsuarioRepository;
-import com.users.UsuariosYEmpleados.dto.TokenDriverDTO;
+import com.users.UsuariosYEmpleados.domain.dto.TokenDriverDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -141,12 +141,11 @@ public class TokenService {
         if (tokenOpt.isEmpty()) {
             return false;
         }
-        
+
         ManejadorTokens tokenEntity = tokenOpt.get();
         Date now = new Date();
-        
-        // Verificar que no esté expirado
-        return tokenEntity.getExpiraEn() == null || 
+
+        return tokenEntity.getExpiraEn() == null ||
                tokenEntity.getExpiraEn().after(now);
     }
     

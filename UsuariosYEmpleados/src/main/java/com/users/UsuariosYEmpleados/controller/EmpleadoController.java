@@ -9,6 +9,7 @@ import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 import com.users.UsuariosYEmpleados.service.EmpleadoService;
 import com.users.UsuariosYEmpleados.service.UserService;
 import com.users.UsuariosYEmpleados.util.BCryptUtils;
+import com.users.UsuariosYEmpleados.util.ResponseUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,37 +43,17 @@ public class EmpleadoController {
             @RequestParam(required = false) String estado) {
 
         try {
-            // Obtener todos los empleados usando el servicio
-            List<EmpleadoDTO> empleados = empleadoService.findAll();
+            if (tipoUsuario != null && !"empleado".equalsIgnoreCase(tipoUsuario.trim())) {
+                return ResponseUtils.ok(List.of(), "No hay empleados para el tipo de usuario solicitado");
+            }
 
-            // Normalizar filtros
-            String nombreFiltro = (nombre != null && !nombre.trim().isEmpty()) ? nombre.toLowerCase() : null;
             final Boolean estadoFiltro = estado != null ? "true".equalsIgnoreCase(estado.trim()) : null;
 
-            // Aplicar filtros
-            List<Map<String, Object>> resultado = empleados.stream()
-                    .filter(emp -> {
-                        // Filtro por nombre
-                        if (nombreFiltro != null &&
-                                emp.getNombre() != null &&
-                                !emp.getNombre().toLowerCase().contains(nombreFiltro)) {
-                            return false;
-                        }
-
-                        // Filtro por estado
-                        if (estadoFiltro != null) {
-                            if (emp.getActivo() == null || emp.getActivo() != estadoFiltro) {
-                                return false;
-                            }
-                        }
-
-                        return true;
-                    })
+            List<Map<String, Object>> resultado = empleadoService.search(nombre, estadoFiltro).stream()
                     .map(emp -> {
                         Map<String, Object> item = new HashMap<>();
 
                         // Información del empleado
-                        item.put("id", emp.getIdUsuario());
                         item.put("idUsuario", emp.getIdUsuario());
                         item.put("nombre", emp.getNombre());
                         item.put("documento", emp.getDocumento());
@@ -111,13 +92,11 @@ public class EmpleadoController {
             EmpleadoDTO empleado = empleadoService.findById(id);
 
             if (empleado == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "Empleado no encontrado"));
+                return ResponseUtils.error(HttpStatus.NOT_FOUND, "Empleado no encontrado");
             }
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", empleado.getIdUsuario());
-            response.put("idUsuario", empleado.getIdUsuario());
             response.put("nombre", empleado.getNombre());
             response.put("documento", empleado.getDocumento());
             response.put("telefono", empleado.getTelefono());
@@ -126,12 +105,11 @@ public class EmpleadoController {
             response.put("activo", empleado.getActivo());
 
             // Información del usuario
-            Map<String, Object> usuarioInfo = new HashMap<>();
-            usuarioInfo.put("correo", empleado.getCorreo());
-            usuarioInfo.put("activo", empleado.getActivo());
-            usuarioInfo.put("tipoUsuario", TipoUsuario.empleado); // Asumimos empleado
+            
+            response.put("correo", empleado.getCorreo());
+            response.put("activo", empleado.getActivo());
 
-            response.put("usuario", usuarioInfo);
+            
 
             return ResponseEntity.ok(ApiResponse.success(response, "Empleado cargado correctamente"));
 
@@ -195,21 +173,20 @@ public class EmpleadoController {
 
             if (nombre == null || documento == null || correo == null ||
                     cargo == null || contrasena == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message",
-                                "Faltan campos obligatorios: nombre, documento, correo, cargo, contraseña"));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST,
+                    "Faltan campos obligatorios: nombre, documento, correo, cargo, contraseña");
             }
 
             // Validar duplicados: correo en Usuario
             if (userService.existsByCorreo(correo)) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "Ya existe un usuario con ese correo"));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST,
+                    "Ya existe un usuario con ese correo");
             }
 
             // Validar documento duplicado
             if (empleadoService.existsByDocumento(documento)) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "Ya existe un empleado con ese documento"));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST,
+                    "Ya existe un empleado con ese documento");
             }
 
             // Hash de contraseña
@@ -279,19 +256,18 @@ public class EmpleadoController {
             if (request.getNombre() == null || request.getDocumento() == null ||
                     request.getCorreo() == null || request.getCargo() == null ||
                     request.getContrasena() == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "Faltan campos obligatorios"));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST, "Faltan campos obligatorios");
             }
 
             // Validar duplicados
             if (userService.existsByCorreo(request.getCorreo())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "Ya existe un usuario con ese correo"));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST,
+                    "Ya existe un usuario con ese correo");
             }
 
             if (empleadoService.existsByDocumento(request.getDocumento())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "Ya existe un empleado con ese documento"));
+                return ResponseUtils.error(HttpStatus.BAD_REQUEST,
+                    "Ya existe un empleado con ese documento");
             }
 
             // Hash de contraseña
@@ -320,8 +296,6 @@ public class EmpleadoController {
 
             // Preparar respuesta simplificada
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Empleado creado exitosamente");
             response.put("empleadoId", empleadoCreado.getIdUsuario());
             response.put("correo", empleadoCreado.getCorreo());
 
@@ -366,8 +340,8 @@ public class EmpleadoController {
                 try {
                     UserDTO usuarioConCorreo = userService.findByCorreo(correo);
                     if (usuarioConCorreo != null && !usuarioConCorreo.getIdUsuario().equals(id)) {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                .body(Map.of("message", "El correo ya está en uso por otro usuario"));
+                        return ResponseUtils.error(HttpStatus.BAD_REQUEST,
+                            "El correo ya está en uso por otro usuario");
                     }
                 } catch (RuntimeException e) {
                     // Si no encuentra usuario con ese correo, está bien
@@ -379,8 +353,8 @@ public class EmpleadoController {
                 try {
                     EmpleadoDTO empleadoConDocumento = empleadoService.findByDocumento(documento);
                     if (empleadoConDocumento != null && !empleadoConDocumento.getIdUsuario().equals(id)) {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                .body(Map.of("message", "El documento ya está en uso por otro empleado"));
+                        return ResponseUtils.error(HttpStatus.BAD_REQUEST,
+                            "El documento ya está en uso por otro empleado");
                     }
                 } catch (RuntimeException e) {
                     // Si no encuentra empleado con ese documento, está bien
@@ -412,8 +386,8 @@ public class EmpleadoController {
                     try {
                         userUpdateDTO.setTipoUsuario(TipoUsuario.valueOf(tipoUsuarioStr.toUpperCase()));
                     } catch (IllegalArgumentException e) {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                .body(Map.of("message", "Tipo de usuario inválido"));
+                        return ResponseUtils.error(HttpStatus.BAD_REQUEST,
+                            "Tipo de usuario inválido");
                     }
                 }
                 if (contrasena != null) {

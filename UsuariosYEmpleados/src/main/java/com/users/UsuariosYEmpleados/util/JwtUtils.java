@@ -16,16 +16,15 @@ public class JwtUtils {
     private final SecretKey refreshSecretKey;
 
     public JwtUtils(
-            @Value("${JWT_SECRET:tu_super_secreto_jwt_development_very_secure_key_12345}") String jwtSecret,
-
-            @Value("${JWT_REFRESH_SECRET:tu_super_secreto_jwt_development_very_secure_key_12345}") String jwtRefreshSecret) {
+            @Value("${JWT_SECRET}") String jwtSecret,
+            @Value("${JWT_REFRESH_SECRET}") String jwtRefreshSecret) {
+        validateSecret(jwtSecret, "JWT_SECRET");
+        validateSecret(jwtRefreshSecret, "JWT_REFRESH_SECRET");
         this.accessSecretKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
         this.refreshSecretKey = Keys.hmacShaKeyFor(jwtRefreshSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateAccessToken(Map<String, Object> payload) {
-        System.out.println("payload//////////////////////////////////////////////////");
-        System.out.println(payload);
         return Jwts.builder()
                 .setClaims(payload)
                 .setIssuedAt(new Date())
@@ -57,5 +56,11 @@ public class JwtUtils {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    private void validateSecret(String secret, String propertyName) {
+        if (secret == null || secret.length() < 32) {
+            throw new IllegalArgumentException(propertyName + " debe tener al menos 32 caracteres");
+        }
     }
 }

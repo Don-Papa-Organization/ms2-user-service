@@ -1,41 +1,23 @@
-package com.users.UsuariosYEmpleados.domain.entity;
+package com.users.UsuariosYEmpleados.domain.dto;
 
 import com.users.UsuariosYEmpleados.enums.TipoUsuario;
-import jakarta.persistence.*;
 
-@Entity
-@Table(name = "usuario")
-public class Usuario {
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idUsuario")
+public class UserResponseDTO {
     private Integer idUsuario;
-		
-    @Column(name = "correo", nullable = false, unique = true, length = 255)
     private String correo;
-    
-    @Column(name = "contrasena", nullable = false, length = 255)
-    private String contrasena;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipoUsuario", nullable = false, length = 20)
     private TipoUsuario tipoUsuario;
-    
-    @Column(name = "activo", nullable = false)
     private Boolean activo;
     
-    // Constructores
-    public Usuario() {}
+    public UserResponseDTO() {
+    }
     
-    public Usuario(String correo, String contrasena, TipoUsuario tipoUsuario, Boolean activo) {
+    public UserResponseDTO(Integer idUsuario, String correo, TipoUsuario tipoUsuario, Boolean activo) {
+        this.idUsuario = idUsuario;
         this.correo = correo;
-        this.contrasena = contrasena;
         this.tipoUsuario = tipoUsuario;
         this.activo = activo;
     }
     
-    // Getters y Setters
     public Integer getIdUsuario() {
         return idUsuario;
     }
@@ -50,14 +32,6 @@ public class Usuario {
     
     public void setCorreo(String correo) {
         this.correo = correo;
-    }
-    
-    public String getContrasena() {
-        return contrasena;
-    }
-    
-    public void setContrasena(String contrasena) {
-        this.contrasena = contrasena;
     }
     
     public TipoUsuario getTipoUsuario() {

@@ -8,9 +8,11 @@ import com.users.UsuariosYEmpleados.domain.repositories.ClienteRepository;
 import com.users.UsuariosYEmpleados.enums.TipoUsuario;
 import com.users.UsuariosYEmpleados.service.UserService;
 import com.users.UsuariosYEmpleados.service.TokenService;
-import com.users.UsuariosYEmpleados.service.apis.emailService;
-import com.users.UsuariosYEmpleados.util.BCryptUtils;
+import com.users.UsuariosYEmpleados.service.ClientService;
+import com.users.UsuariosYEmpleados.service.EmpleadoService;
+import com.users.UsuariosYEmpleados.service.apis.EmailService;
 import com.users.UsuariosYEmpleados.util.JwtUtils;
+import com.users.UsuariosYEmpleados.util.ResponseUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +20,8 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -46,64 +46,39 @@ public class AuthController {
         this.tokenService = tokenService;
         this.clienteRepository = clienteRepository;
         this.emailService = emailService;
-        this.bCryptUtils = bCryptUtils;
         this.jwtUtils = jwtUtils;
         this.nodeEnv = nodeEnv;
     }
 
-    private static final Pattern EMAIL_REGEX = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
-    private static final Pattern PASSWORD_REGEX = Pattern
-            .compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[A-Za-z\\d@$!%*?&]{8,}$");
-    private static final String MSG_EMAIL_PASSWORD_REQUIRED = "Correo y contraseña son obligatorios";
-
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Map<String, Object> requestBody) {
         try {
-            // Validaciones de entrada
             String correo = (String) requestBody.get("correo");
             String contrasena = (String) requestBody.get("contrasena");
             String tipoUsuarioStr = (String) requestBody.get("tipoUsuario");
 
-            System.out.println("[REGISTER] Datos recibidos - correo: " + correo +
-                    ", tipoUsuario: " + tipoUsuarioStr);
-
-            if (isBlank(correo) || isBlank(contrasena)) {
-                return badRequest(MSG_EMAIL_PASSWORD_REQUIRED);
-            }
-            if (!EMAIL_REGEX.matcher(correo).matches()) {
-                return badRequest("Formato de correo inválido");
-            }
-            if (!PASSWORD_REGEX.matcher(contrasena).matches()) {
-                return badRequest(
-                        "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número");
-            }
-
-            // Validar tipoUsuario
-            TipoUsuario tipoUsuario = TipoUsuario.cliente; // valor por defecto
+            // Parsear tipo de usuario
+            TipoUsuario tipoUsuario = TipoUsuario.cliente;
             if (tipoUsuarioStr != null) {
                 try {
                     tipoUsuario = TipoUsuario.valueOf(tipoUsuarioStr.toLowerCase());
                 } catch (IllegalArgumentException e) {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                            .body(Map.of("message", "Tipo de usuario inválido"));
+                    return ResponseUtils.error(HttpStatus.BAD_REQUEST, "Tipo de usuario inválido");
                 }
             }
 
-            // Validar correo duplicado usando UserService
-            if (userService.existsByCorreo(correo)) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body(Map.of("message", "El correo ya está registrado"));
-            }
+            // Registrar usuario (validaciones en UserService)
+            UserDTO usuarioCreado = userService.register(correo, contrasena, tipoUsuario);
 
-            // Hash de contraseña
-            String hashedPassword = bCryptUtils.hashPassword(contrasena);
+            // Crear y enviar token de verificación
+            TokenDriverDTO tokenDTO = tokenService.createToken(usuarioCreado.getIdUsuario(), 1);
+            emailService.sendVerificationEmail(correo, tokenDTO.getToken());
 
-            // Crear DTO para usuario
-            UserDTO userDTO = new UserDTO();
+                Map<String, Object> data = new HashMap<>();
+                data.put("userId", usuarioCreado.getIdUsuario());
 
-            userDTO.setCorreo(correo);
-            userDTO.setContrasena(hashedPassword);
-            userDTO.setTipoUsuario(tipoUsuario);
+                return ResponseUtils.created(data,
+                    "Usuario registrado correctamente. Revisa tu correo para verificar la cuenta.");
 
             // En desarrollo, activar automáticamente; en producción, requiere verificación
             // de email
@@ -159,7 +134,7 @@ public class AuthController {
                         .body(ApiResponse.error("Token de verificación requerido"));
             }
 
-            // Validar token usando TokenService
+            // Validar token
             if (!tokenService.isValidToken(token)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("Token de verificación inválido o expirado"));
@@ -173,8 +148,10 @@ public class AuthController {
                         .body(ApiResponse.error("Token de verificación no encontrado"));
             }
 
-            // Buscar usuario usando UserService
-            UserDTO usuario = userService.findById(TokenDriverDTO.getIdUsuario());
+            // Activar usuario (validación en UserService)
+            userService.activateUser(tokenDTO.getIdUsuario());
+            
+            UserDTO usuario = userService.findById(tokenDTO.getIdUsuario());
 
             if (usuario == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -266,10 +243,6 @@ public class AuthController {
             payload.put("tipoUsuario", user.getTipoUsuario().toString().toLowerCase());
             payload.put("activo", user.getActivo());
     
-            System.out.println("payload//////////////////////////////////////////////////");
-            System.out.println(payload);
-
-            
             String accessToken = jwtUtils.generateAccessToken(payload);
             String refreshToken = jwtUtils.generateRefreshToken(payload);
 
@@ -292,7 +265,7 @@ public class AuthController {
             tokenService.createToken(user.getIdUsuario(), 7, accessToken);
             tokenService.createToken(user.getIdUsuario(), 7, refreshToken);
 
-            System.out.println("[LOGIN] Tokens generados exitosamente para usuario: " + user.getCorreo());
+                return ResponseUtils.ok(data, "Inicio de sesión exitoso");
 
             Map<String, Object> responseBody = new HashMap<>();
             Map<String, Object> userInfo = new HashMap<>();
@@ -322,24 +295,19 @@ public class AuthController {
         try {
             // Obtener el refreshToken de las cookies
             if (token == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "No se proporcionó refresh token"));
+                return ResponseUtils.error(HttpStatus.UNAUTHORIZED, "No se proporcionó refresh token");
             }
 
             // Verificar refreshToken JWT
             Map<String, Object> payload = jwtUtils.verifyRefreshToken(token);
 
-            // Ya no verificamos si payload es null porque verifyRefreshToken ahora lanza
-            // excepción
-            String username = (String) payload.get("sub");
-
+            // Ya no verificamos si payload es null porque verifyRefreshToken ahora lanza excepción
             // Buscar usuario usando UserService
             Integer userId = (Integer) payload.get("id");
             UserDTO user = userService.findById(userId);
 
             if (user == null || Boolean.FALSE.equals(user.getActivo())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("message", "Usuario no válido o inactivo"));
+                return ResponseUtils.error(HttpStatus.FORBIDDEN, "Usuario no válido o inactivo");
             }
 
             // Verificar que el token también exista en nuestra base de datos
@@ -369,7 +337,6 @@ public class AuthController {
             response.addCookie(accessTokenCookie);
 
             Map<String, Object> responseBody = new HashMap<>();
-            responseBody.put("message", "Nuevo access token generado");
             responseBody.put("accessToken", newAccessToken);
 
             return ResponseEntity.ok(ApiResponse.success(responseBody, "Token refrescado correctamente"));
@@ -501,6 +468,7 @@ public class AuthController {
             }
 
             // Obtener usuario usando UserService
+            Integer userId = (Integer) payload.get("id");
             UserDTO user = userService.findById(userId);
 
             if (user == null) {

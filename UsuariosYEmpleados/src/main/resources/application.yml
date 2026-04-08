@@ -2,13 +2,13 @@ spring:
   application:
     name: UsuariosYEmpleados
 
-  # ========== DATASOURCE (SQL Server) ==========
+  # ========== DATASOURCE (MySQL) ==========
   datasource:
-    url: jdbc:sqlserver://${DB_HOST:user-mysql.database.windows.net}:${DB_PORT:1433};database=user-mysql;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:don_papa}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     
-    username: ${DB_USERNAME:donpapamaster}
+    username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:MiContraseñaSegura123!}
-    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       connection-timeout: 30000
       maximum-pool-size: 10
@@ -21,7 +21,7 @@ spring:
     show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.SQLServer2016Dialect
+        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.MySQL8Dialect}
         jdbc:
           batch_size: 20
 

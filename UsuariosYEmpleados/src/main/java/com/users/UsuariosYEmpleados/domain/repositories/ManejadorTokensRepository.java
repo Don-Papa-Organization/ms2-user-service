@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface ManejadorTokensRepository extends JpaRepository<ManejadorTokens, Integer> {
@@ -13,7 +12,9 @@ public interface ManejadorTokensRepository extends JpaRepository<ManejadorTokens
     // Métodos básicos proporcionados por JpaRepository
     
     // Métodos custom esenciales
-    Optional<ManejadorTokens> findByToken(String token);
+    List<ManejadorTokens> findAllByToken(String token);
     List<ManejadorTokens> findByIdUsuario(Integer idUsuario);
-    Optional<ManejadorTokens> findByIdUsuarioAndToken(Integer idUsuario, String token);
+    List<ManejadorTokens> findAllByIdUsuarioAndToken(Integer idUsuario, String token);
+    void deleteByToken(String token);
+    void deleteByIdUsuarioAndToken(Integer idUsuario, String token);
 }

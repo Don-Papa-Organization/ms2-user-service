@@ -1,6 +1,7 @@
 package com.users.UsuariosYEmpleados.controller;
 
 import com.users.UsuariosYEmpleados.domain.entity.Empleado;
+import com.users.UsuariosYEmpleados.dto.ApiResponse;
 import com.users.UsuariosYEmpleados.dto.UserDTO;
 import com.users.UsuariosYEmpleados.dto.EmpleadoDTO;
 import com.users.UsuariosYEmpleados.dto.CrearEmpleadoDTO;
@@ -77,14 +78,13 @@ public class EmpleadoController {
                         item.put("documento", emp.getDocumento());
                         item.put("telefono", emp.getTelefono());
                         item.put("cargo", emp.getCargo());
+                        item.put("correo", emp.getCorreo());
+                        item.put("activo", emp.getActivo());
 
                         // Información del usuario (si está disponible)
                         Map<String, Object> usuarioInfo = new HashMap<>();
                         usuarioInfo.put("correo", emp.getCorreo());
                         usuarioInfo.put("activo", emp.getActivo());
-                        // TipoUsuario no está en EmpleadoDTO actualmente, necesitaríamos agregarlo
-                        // usuarioInfo.put("tipoUsuario", TipoUsuario.empleado); // Asumimos que es
-                        // empleado
 
                         item.put("usuario", usuarioInfo);
 
@@ -92,13 +92,13 @@ public class EmpleadoController {
                     })
                     .collect(Collectors.toList());
 
-            return ResponseEntity.ok(resultado);
+            return ResponseEntity.ok(ApiResponse.success(resultado, "Empleados cargados correctamente"));
 
         } catch (Exception error) {
-            System.err.println("[GET empleadoS ERROR] " + error.getMessage());
+            System.err.println("[GET empleados ERROR] " + error.getMessage());
             error.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al obtener empleados", "error", error.getMessage()));
+                    .body(ApiResponse.error("Error al obtener empleados: " + error.getMessage()));
         }
     }
 
@@ -122,6 +122,8 @@ public class EmpleadoController {
             response.put("documento", empleado.getDocumento());
             response.put("telefono", empleado.getTelefono());
             response.put("cargo", empleado.getCargo());
+            response.put("correo", empleado.getCorreo());
+            response.put("activo", empleado.getActivo());
 
             // Información del usuario
             Map<String, Object> usuarioInfo = new HashMap<>();
@@ -131,15 +133,15 @@ public class EmpleadoController {
 
             response.put("usuario", usuarioInfo);
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(ApiResponse.success(response, "Empleado cargado correctamente"));
 
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception error) {
             System.err.println("[GET empleado BY ID ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al obtener empleado", "error", error.getMessage()));
+                    .body(ApiResponse.error("Error al obtener empleado"));
         }
     }
 
@@ -155,6 +157,8 @@ public class EmpleadoController {
             response.put("documento", empleado.getDocumento());
             response.put("telefono", empleado.getTelefono());
             response.put("cargo", empleado.getCargo());
+            response.put("correo", empleado.getCorreo());
+            response.put("activo", empleado.getActivo());
 
             // Información del usuario
             Map<String, Object> usuarioInfo = new HashMap<>();
@@ -163,15 +167,15 @@ public class EmpleadoController {
 
             response.put("usuario", usuarioInfo);
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(ApiResponse.success(response, "Empleado cargado correctamente"));
 
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception error) {
             System.err.println("[GET empleado BY DOCUMENTO ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al obtener empleado por documento"));
+                    .body(ApiResponse.error("Error al obtener empleado por documento"));
         }
     }
 
@@ -243,6 +247,8 @@ public class EmpleadoController {
             response.put("documento", empleadoCreado.getDocumento());
             response.put("telefono", empleadoCreado.getTelefono());
             response.put("cargo", empleadoCreado.getCargo());
+            response.put("correo", usuarioCreado.getCorreo());
+            response.put("activo", usuarioCreado.getActivo());
 
             Map<String, Object> usuarioResponse = new HashMap<>();
             usuarioResponse.put("correo", usuarioCreado.getCorreo());
@@ -252,16 +258,16 @@ public class EmpleadoController {
             response.put("usuario", usuarioResponse);
             response.put("message", "Empleado creado exitosamente");
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response, "Empleado creado exitosamente"));
 
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception error) {
             System.err.println("[CREATE empleado ERROR] " + error.getMessage());
             error.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al crear empleado", "error", error.getMessage()));
+                    .body(ApiResponse.error("Error al crear empleado"));
         }
     }
 
@@ -319,15 +325,15 @@ public class EmpleadoController {
             response.put("empleadoId", empleadoCreado.getIdUsuario());
             response.put("correo", empleadoCreado.getCorreo());
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response, "Empleado creado exitosamente"));
 
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception error) {
             System.err.println("[CREATE empleado COMPLETO ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al crear empleado"));
+                    .body(ApiResponse.error("Error al crear empleado"));
         }
     }
 
@@ -426,6 +432,8 @@ public class EmpleadoController {
             response.put("documento", empleadoFinal.getDocumento());
             response.put("telefono", empleadoFinal.getTelefono());
             response.put("cargo", empleadoFinal.getCargo());
+            response.put("correo", empleadoFinal.getCorreo());
+            response.put("activo", empleadoFinal.getActivo());
 
             Map<String, Object> usuarioInfo = new HashMap<>();
             usuarioInfo.put("correo", empleadoFinal.getCorreo());
@@ -434,15 +442,15 @@ public class EmpleadoController {
             response.put("usuario", usuarioInfo);
             response.put("message", "Empleado actualizado correctamente");
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(ApiResponse.success(response, "Empleado actualizado correctamente"));
 
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception error) {
             System.err.println("[UPDATE empleado ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al actualizar empleado", "error", error.getMessage()));
+                    .body(ApiResponse.error("Error al actualizar empleado: " + error.getMessage()));
         }
     }
 
@@ -470,17 +478,15 @@ public class EmpleadoController {
             // Eliminar empleado
             empleadoService.delete(id);
 
-            return ResponseEntity.ok(Map.of(
-                    "message", "Empleado eliminado/desactivado correctamente",
-                    "empleadoId", id));
+            return ResponseEntity.ok(ApiResponse.success(Map.of("message", "Empleado eliminado/desactivado correctamente", "empleadoId", id), "Empleado eliminado"));
 
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception error) {
             System.err.println("[DELETE empleado ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al eliminar empleado", "error", error.getMessage()));
+                    .body(ApiResponse.error("Error al eliminar empleado: " + error.getMessage()));
         }
     }
 
@@ -489,10 +495,10 @@ public class EmpleadoController {
     public ResponseEntity<?> verificarDocumento(@PathVariable String documento) {
         try {
             boolean existe = empleadoService.existsByDocumento(documento);
-            return ResponseEntity.ok(Map.of("existe", existe));
+            return ResponseEntity.ok(ApiResponse.success(Map.of("existe", existe), "Verificación completada"));
         } catch (Exception error) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al verificar documento"));
+                    .body(ApiResponse.error("Error al verificar documento"));
         }
     }
 
@@ -520,12 +526,12 @@ public class EmpleadoController {
                     })
                     .collect(Collectors.toList());
 
-            return ResponseEntity.ok(resultado);
+            return ResponseEntity.ok(ApiResponse.success(resultado, "Empleados por cargo cargados correctamente"));
 
         } catch (Exception error) {
             System.err.println("[GET empleadoS BY CARGO ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al obtener empleados por cargo"));
+                    .body(ApiResponse.error("Error al obtener empleados por cargo"));
         }
     }
 
@@ -553,12 +559,12 @@ public class EmpleadoController {
                     })
                     .collect(Collectors.toList());
 
-            return ResponseEntity.ok(resultado);
+            return ResponseEntity.ok(ApiResponse.success(resultado, "Búsqueda de empleados completada"));
 
         } catch (Exception error) {
             System.err.println("[BUSCAR empleadoS ERROR] " + error.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Error al buscar empleados"));
+                    .body(ApiResponse.error("Error al buscar empleados"));
         }
     }
 }

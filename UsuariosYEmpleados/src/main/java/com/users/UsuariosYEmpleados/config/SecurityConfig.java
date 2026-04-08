@@ -22,15 +22,19 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/auth/**").permitAll() // Login/registro/logout sin autenticación
                                                 
                                                 // Rutas específicas de empleados - solo administrador
-                                                .requestMatchers("/api/empleados").hasRole("administrador") // GET all, POST create
-                                                .requestMatchers("/api/empleados/{id}").hasRole("administrador") // GET by id, PUT, DELETE
-                                                .requestMatchers("/api/empleados/completo").hasRole("administrador") // POST completo
-                                                .requestMatchers("/api/empleados/cargo/**").hasRole("administrador") // GET by cargo
-                                                .requestMatchers("/api/empleados/buscar").hasRole("administrador") // GET buscar
-                                                .requestMatchers("/api/empleados/verificar-documento/**").hasRole("administrador") // GET verificar
+                                                .requestMatchers("/api/empleados").hasRole("ADMINISTRADOR") // GET all, POST create
+                                                .requestMatchers("/api/empleados/{id}").hasRole("ADMINISTRADOR") // GET by id, PUT, DELETE
+                                                .requestMatchers("/api/empleados/completo").hasRole("ADMINISTRADOR") // POST completo
+                                                .requestMatchers("/api/empleados/cargo/**").hasRole("ADMINISTRADOR") // GET by cargo
+                                                .requestMatchers("/api/empleados/buscar").hasRole("ADMINISTRADOR") // GET buscar
+                                                .requestMatchers("/api/empleados/verificar-documento/**").hasRole("ADMINISTRADOR") // GET verificar
                                                 
+                                                // Rutas de gestión de usuarios y clientes - solo administrador
+                                                .requestMatchers("/api/usuarios/**").hasRole("ADMINISTRADOR")
+                                                .requestMatchers("/api/clientes/**").hasRole("ADMINISTRADOR")
+
                                                 // Ruta que permite administrador y empleado consultar su propio documento
-                                                .requestMatchers("/api/empleados/documento/**").hasAnyRole("administrador", "empleado")
+                                                .requestMatchers("/api/empleados/documento/**").hasAnyRole("ADMINISTRADOR", "EMPLEADO")
                                                 
                                                 // Cualquier otra ruta requiere autenticación (sin rol específico)
                                                 .anyRequest().authenticated()
